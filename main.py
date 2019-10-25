@@ -110,10 +110,17 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(self.scroller)
 
 
+def is_allowed(name: str) -> bool:
+    for ex in ['.jpg', '.jpeg', '.png', '.bmp']:
+        if name.endswith(ex):
+            return True
+    return False
+
+
 with os.scandir(sys.argv[1]) as it:
     images = [
         os.path.join(sys.argv[1], entry.name)
-        for entry in it if entry.is_file()]
+        for entry in it if is_allowed(entry.name) and entry.is_file()]
 
 app = W.QApplication([])
 
