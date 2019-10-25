@@ -68,28 +68,6 @@ class MainWindow(W.QMainWindow):
         self.scroller = ImageScroller(200, images)
         self.setCentralWidget(self.scroller)
 
-        # self.images = images
-        # self.label = W.QLabel()
-        # btn = W.QPushButton('next')
-        # btn.clicked.connect(lambda _: self.increment())  # type: ignore
-        # layout = W.QGridLayout()
-        # layout.addWidget(self.label, 0, 0)
-        # layout.addWidget(btn, 1, 0)
-        # widget = W.QWidget()
-        # widget.setLayout(layout)
-        # self.setCentralWidget(widget)
-        # self.idx = 0
-        # self.draw()
-
-    # def increment(self) -> None:
-    #     self.idx = (self.idx + 1) % len(images)
-    #     self.draw()
-    #
-    # def draw(self) -> None:
-    #     print(self.images[self.idx])
-    #     self.label.setPixmap(G.QPixmap(
-    #         self.images[self.idx]).scaled(200, 200, C.Qt.KeepAspectRatio))
-
 
 with os.scandir(sys.argv[1]) as it:
     images = [
