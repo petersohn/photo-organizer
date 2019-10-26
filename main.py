@@ -27,7 +27,11 @@ class MainWindow(W.QMainWindow):
             G.QIcon(get_pixmap(filename, 200)),
             os.path.basename(filename)) for filename in images)
         self.from_list = W.QListView()
+        self.from_list.setViewMode(W.QListView.IconMode)
+        self.from_list.setFlow(W.QListView.TopToBottom)
+        self.from_list.setWrapping(False)
         self.from_list.setModel(self.model)
+        self.from_list.setIconSize(C.QSize(200, 200))
         self.setCentralWidget(self.from_list)
 
 
