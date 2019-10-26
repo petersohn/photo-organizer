@@ -121,6 +121,7 @@ with os.scandir(sys.argv[1]) as it:
     images = [
         os.path.join(sys.argv[1], entry.name)
         for entry in it if is_allowed(entry.name) and entry.is_file()]
+images.sort()
 
 app = W.QApplication([])
 
