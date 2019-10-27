@@ -106,11 +106,12 @@ class MainWindow(W.QMainWindow):
         rows = [
             index.row() for index in
             self.from_list.selectionModel().selectedIndexes()]
-        rows.sort(reverse=True)
         for row in rows:
             item = self.from_model.takeItem(row, 0)
-            self.from_model.removeRow(row)
             self.to_model.appendRow(item)
+        rows.sort(reverse=True)
+        for row in rows:
+            self.from_model.removeRow(row)
 
     def remove_items(self) -> None:
         rows = [
