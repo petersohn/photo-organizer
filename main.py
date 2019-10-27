@@ -39,6 +39,13 @@ def get_pixmap(filename: str, size: int) -> G.QPixmap:
     return result
 
 
+class ModelItem(G.QStandardItem):
+    def __init__(self, filename: str):
+        self.filename = filename
+        super(ModelItem, self).__init__(
+            G.QIcon(get_pixmap(filename, 200)), os.path.basename(filename))
+
+
 class MainWindow(W.QMainWindow):
     def __init__(self, images: List[str]) -> None:
         super(MainWindow, self).__init__()
@@ -46,9 +53,8 @@ class MainWindow(W.QMainWindow):
         self.resize(800, 500)
 
         self.from_model = G.QStandardItemModel()
-        self.from_model.appendColumn(G.QStandardItem(
-            G.QIcon(get_pixmap(filename, 200)),
-            os.path.basename(filename)) for filename in images)
+        self.from_model.appendColumn(
+            ModelItem(filename) for filename in images)
         self.from_list = W.QListView()
         self.from_list.setViewMode(W.QListView.IconMode)
         self.from_list.setMovement(W.QListView.Static)
@@ -71,10 +77,19 @@ class MainWindow(W.QMainWindow):
         self.to_list.setFixedWidth(220)
 
         move_layout = W.QVBoxLayout()
+
         add_button = W.QPushButton('->')
-        remove_button = W.QPushButton('<-')
+        add_button.clicked.connect(lambda _: self.add_items())
         move_layout.addWidget(add_button)
+
+        remove_button = W.QPushButton('<-')
+        remove_button.clicked.connect(lambda _: self.remove_items())
         move_layout.addWidget(remove_button)
+
+        apply_button = W.QPushButton('Apply')
+        apply_button.clicked.connect(lambda _: self.apply())
+        move_layout.addWidget(apply_button)
+
         move_widget = W.QWidget()
         move_widget.setLayout(move_layout)
 
@@ -85,6 +100,26 @@ class MainWindow(W.QMainWindow):
         central_widget = W.QWidget()
         central_widget.setLayout(splitter)
         self.setCentralWidget(central_widget)
+
+    def add_items(self) -> None:
+        for index in self.from_list.selectionModel().selectedIndexes():
+            item = self.from_model.takeItem(
+                index.row(), index.column())
+            self.from_model.removeRow(index.row())
+            self.to_model.appendRow(item)
+
+    def remove_items(self) -> None:
+        for index in self.to_list.selectionModel().selectedIndexes():
+            item = self.to_model.takeItem(
+                index.row(), index.column())
+            self.to_model.removeRow(index.row())
+            self.from_model.appendRow(item)
+        self.from_model.sort(0)
+
+    def apply(self) -> None:
+        for i in range(self.to_model.rowCount()):
+            item = cast(ModelItem, self.to_model.item(i, 0))
+            print(item.filename)
 
 
 def is_allowed(name: str) -> bool:
