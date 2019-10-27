@@ -63,6 +63,7 @@ class MainWindow(W.QMainWindow):
         self.from_list.setModel(self.from_model)
         self.from_list.setIconSize(C.QSize(200, 200))
         self.from_list.setMinimumWidth(220)
+        self.from_list.setGridSize(C.QSize(210, 210))
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
