@@ -44,20 +44,47 @@ class MainWindow(W.QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Photo Organizer")
         self.resize(800, 500)
-        self.model = G.QStandardItemModel()
-        self.model.appendColumn(G.QStandardItem(
+
+        self.from_model = G.QStandardItemModel()
+        self.from_model.appendColumn(G.QStandardItem(
             G.QIcon(get_pixmap(filename, 200)),
             os.path.basename(filename)) for filename in images)
         self.from_list = W.QListView()
         self.from_list.setViewMode(W.QListView.IconMode)
-        # self.from_list.setFlow(W.QListView.TopToBottom)
         self.from_list.setMovement(W.QListView.Static)
         self.from_list.setResizeMode(W.QListView.Adjust)
         self.from_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
-        # self.from_list.setWrapping(False)
-        self.from_list.setModel(self.model)
+        self.from_list.setModel(self.from_model)
         self.from_list.setIconSize(C.QSize(200, 200))
-        self.setCentralWidget(self.from_list)
+        self.from_list.setMinimumWidth(220)
+
+        self.to_model = G.QStandardItemModel()
+        self.to_list = W.QListView()
+        self.to_list.setFlow(W.QListView.TopToBottom)
+        self.to_list.setWrapping(False)
+        self.to_list.setViewMode(W.QListView.IconMode)
+        self.to_list.setMovement(W.QListView.Static)
+        self.to_list.setResizeMode(W.QListView.Adjust)
+        self.to_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
+        self.to_list.setModel(self.to_model)
+        self.to_list.setIconSize(C.QSize(200, 200))
+        self.to_list.setFixedWidth(220)
+
+        move_layout = W.QVBoxLayout()
+        add_button = W.QPushButton('->')
+        remove_button = W.QPushButton('<-')
+        move_layout.addWidget(add_button)
+        move_layout.addWidget(remove_button)
+        move_widget = W.QWidget()
+        move_widget.setLayout(move_layout)
+
+        splitter = W.QHBoxLayout()
+        splitter.addWidget(self.from_list)
+        splitter.addWidget(move_widget)
+        splitter.addWidget(self.to_list)
+        central_widget = W.QWidget()
+        central_widget.setLayout(splitter)
+        self.setCentralWidget(central_widget)
 
 
 def is_allowed(name: str) -> bool:
