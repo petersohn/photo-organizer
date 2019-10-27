@@ -3,18 +3,55 @@ import os
 import PyQt5.QtWidgets as W
 import PyQt5.QtGui as G
 import PyQt5.QtCore as C
-from typing import List, cast, Optional
+import exifread
+import pprint
+from typing import List, cast, Optional, Dict
+
+
+orientations: Dict[int, G.QTransform] = {
+    2: G.QTransform(-1, 0, 0, 1, 0, 0),
+    3: G.QTransform(-1, 0, 0, -1, 0, 0),
+    4: G.QTransform(1, 0, 0, -1, 0, 0),
+    5: G.QTransform(0, 1, 1, 0, 0, 0),
+    6: G.QTransform(0, 1, -1, 0, 0, 0),
+    7: G.QTransform(0, -1, -1, 0, 0, 0),
+    8: G.QTransform(0, -1, 1, 0, 0, 0),
+}
 
 
 def get_pixmap(filename: str, size: int) -> G.QPixmap:
     print(filename)
     key = filename + '///' + str(size)
-    result = G.QPixmapCache.find(key)
+    result = cast(Optional[G.QPixmap], G.QPixmapCache.find(key))
     if result is not None:
         return result
+    with open(filename, 'rb') as f:
+        exif = exifread.process_file(f, details=False)
+    orientation = exif.get('Image Orientation')
+
     result = G.QPixmap(filename).scaled(size, size, C.Qt.KeepAspectRatio)
+    if orientation is not None:
+        transform = orientations.get(cast(List[int], orientation.values)[0])
+        if transform is not None:
+            result = result.transformed(transform)
     G.QPixmapCache.insert(key, result)
     return result
+
+
+def foo(x: str) -> None:
+    pass
+
+
+def bar() -> str:
+    return ''
+
+
+def foobar() -> str:
+    res = bar()
+    if res is not None:
+        return res
+    foo(0)
+    return ''
 
 
 class MainWindow(W.QMainWindow):
