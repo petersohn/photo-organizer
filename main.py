@@ -39,22 +39,6 @@ def get_pixmap(filename: str, size: int) -> G.QPixmap:
     return result
 
 
-def foo(x: str) -> None:
-    pass
-
-
-def bar() -> str:
-    return ''
-
-
-def foobar() -> str:
-    res = bar()
-    if res is not None:
-        return res
-    foo(0)
-    return ''
-
-
 class MainWindow(W.QMainWindow):
     def __init__(self, images: List[str]) -> None:
         super(MainWindow, self).__init__()
