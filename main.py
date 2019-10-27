@@ -103,17 +103,23 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(central_widget)
 
     def add_items(self) -> None:
-        for index in self.from_list.selectionModel().selectedIndexes():
-            item = self.from_model.takeItem(
-                index.row(), index.column())
-            self.from_model.removeRow(index.row())
+        rows = [
+            index.row() for index in
+            self.from_list.selectionModel().selectedIndexes()]
+        rows.sort(reverse=True)
+        for row in rows:
+            item = self.from_model.takeItem(row, 0)
+            self.from_model.removeRow(row)
             self.to_model.appendRow(item)
 
     def remove_items(self) -> None:
-        for index in self.to_list.selectionModel().selectedIndexes():
-            item = self.to_model.takeItem(
-                index.row(), index.column())
-            self.to_model.removeRow(index.row())
+        rows = [
+            index.row() for index in
+            self.to_list.selectionModel().selectedIndexes()]
+        rows.sort(reverse=True)
+        for row in rows:
+            item = self.to_model.takeItem(row, 0)
+            self.to_model.removeRow(row)
             self.from_model.appendRow(item)
         self.from_model.sort(0)
 
