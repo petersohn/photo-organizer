@@ -29,7 +29,8 @@ def get_pixmap(filename: str, size: int) -> G.QPixmap:
         exif = exifread.process_file(f, details=False)
     orientation = exif.get('Image Orientation')
 
-    result = G.QPixmap(filename).scaled(size, size, C.Qt.KeepAspectRatio)
+    result = G.QPixmap(filename).scaled(
+        size, size, C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
     if orientation is not None:
         transform = orientations.get(cast(List[int], orientation.values)[0])
         if transform is not None:
