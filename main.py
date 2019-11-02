@@ -156,23 +156,30 @@ class MainWindow(W.QMainWindow):
         self.to_model.removeRows(first, last - first)
         return result
 
+    def _move(self, first: int, last: int, diff: int) -> None:
+        assert first != last
+        items = self._take_to_items(first, last)
+        for item in items:
+            self.to_model.insertRow(first + diff, item)
+        self.to_list.selectionModel().select(
+            C.QItemSelection(
+                self.to_model.index(first + diff, 0),
+                self.to_model.index(last + diff - 1, 0)),
+            C.QItemSelectionModel.ClearAndSelect)
+
     def move_up(self) -> None:
         selection = self._get_selection_range(self.to_list)
         assert selection
         first, last = selection
         assert first != 0
-        items = self._take_to_items(first, last)
-        for item in items:
-            self.to_model.insertRow(first - 1, item)
+        self._move(first, last, -1)
 
     def move_down(self) -> None:
         selection = self._get_selection_range(self.to_list)
         assert selection
         first, last = selection
         assert last < self.to_model.rowCount()
-        items = self._take_to_items(first, last)
-        for item in items:
-            self.to_model.insertRow(first + 1, item)
+        self._move(first, last, 1)
 
     def check_to_selection(self) -> None:
         selection = self._get_selection_range(self.to_list)
