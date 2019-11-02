@@ -76,7 +76,6 @@ class MainWindow(W.QMainWindow):
         self.to_list.setModel(self.to_model)
         self.to_list.setIconSize(C.QSize(200, 200))
         self.to_list.setFixedWidth(220)
-        self.to_list.setMovement(W.QListView.Snap)
         self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_to_selection())
 
@@ -159,6 +158,7 @@ class MainWindow(W.QMainWindow):
     def _move(self, first: int, last: int, diff: int) -> None:
         assert first != last
         items = self._take_to_items(first, last)
+        items.reverse()
         for item in items:
             self.to_model.insertRow(first + diff, item)
         self.to_list.selectionModel().select(
