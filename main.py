@@ -46,15 +46,31 @@ class ModelItem(G.QStandardItem):
             G.QIcon(get_pixmap(filename, 200)), os.path.basename(filename))
 
 
+class InitEvent(C.QEvent):
+    EventType: Optional[int] = None
+
+    def __init__(self, path: str):
+        if InitEvent.EventType is None:
+            InitEvent.EventType = C.QEvent.registerEventType()
+        self.path = path
+        super(InitEvent, self).__init__(
+            cast(C.QEvent.Type, InitEvent.EventType))
+
+
+def is_allowed(name: str) -> bool:
+    for ex in ['.jpg', '.jpeg', '.png', '.bmp']:
+        if name.endswith(ex):
+            return True
+    return False
+
+
 class MainWindow(W.QMainWindow):
-    def __init__(self, images: List[str]) -> None:
+    def __init__(self, path: str) -> None:
         super(MainWindow, self).__init__()
         self.setWindowTitle("Photo Organizer")
         self.resize(800, 500)
 
         self.from_model = G.QStandardItemModel()
-        self.from_model.appendColumn(
-            ModelItem(filename) for filename in images)
         self.from_list = W.QListView()
         self.from_list.setViewMode(W.QListView.IconMode)
         self.from_list.setMovement(W.QListView.Static)
@@ -118,6 +134,15 @@ class MainWindow(W.QMainWindow):
         toolbar = W.QToolBar()
         toolbar.addAction('Apply', self.apply)
         self.addToolBar(toolbar)
+
+        C.QCoreApplication.postEvent(self, InitEvent(path))
+
+    def event(self, event: C.QEvent) -> bool:
+        if cast(int, event.type()) == InitEvent.EventType:
+            init_event = cast(InitEvent, event)
+            self._add_dir(init_event.path)
+            return True
+        return super(MainWindow, self).event(event)
 
     def _get_selected_items(self, view: W.QListView) -> List[int]:
         return [
@@ -193,12 +218,15 @@ class MainWindow(W.QMainWindow):
             item = cast(ModelItem, self.to_model.item(i, 0))
             print(item.filename)
 
-
-def is_allowed(name: str) -> bool:
-    for ex in ['.jpg', '.jpeg', '.png', '.bmp']:
-        if name.endswith(ex):
-            return True
-    return False
+    def _add_dir(self, path: str) -> None:
+        with os.scandir(sys.argv[1]) as it:
+            images = [
+                os.path.join(sys.argv[1], entry.name)
+                for entry in it if is_allowed(entry.name) and entry.is_file()]
+        images.sort()
+        for image in images:
+            self.from_model.appendRow([ModelItem(image)])
+            W.QApplication.processEvents()
 
 
 with os.scandir(sys.argv[1]) as it:
@@ -209,7 +237,7 @@ images.sort()
 
 app = W.QApplication([])
 
-window = MainWindow(images)
+window = MainWindow(sys.argv[1])
 window.show()
 
 app.exec_()
