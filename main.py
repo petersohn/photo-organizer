@@ -21,16 +21,20 @@ orientations: Dict[int, G.QTransform] = {
 
 def get_pixmap(filename: str, size: int) -> G.QPixmap:
     print(filename)
-    key = filename + '///' + str(size)
+    key = filename
     result = cast(Optional[G.QPixmap], G.QPixmapCache.find(key))
-    if result is not None:
+    if result is not None and (
+            result.width() >= size or result.height() >= size):
         return result
+
     with open(filename, 'rb') as f:
         exif = exifread.process_file(f, details=False)
     orientation = exif.get('Image Orientation')
 
-    result = G.QPixmap(filename).scaled(
-        size, size, C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
+    result = G.QPixmap(filename)
+    if result.width() > size or result.height() > size:
+        result = result.scaled(
+            size, size, C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
     if orientation is not None:
         transform = orientations.get(cast(List[int], orientation.values)[0])
         if transform is not None:
