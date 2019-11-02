@@ -34,7 +34,8 @@ def get_pixmap(filename: str, size: int) -> G.QPixmap:
     result = G.QPixmap(filename)
     if result.width() > size or result.height() > size:
         result = result.scaled(
-            size, size, C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
+            size + 20, size + 20,
+            C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
     if orientation is not None:
         transform = orientations.get(cast(List[int], orientation.values)[0])
         if transform is not None:
@@ -147,21 +148,24 @@ class MainWindow(W.QMainWindow):
 
     def resize_pictures(self, size: int) -> None:
         separation = 10
-        for i in range(self.from_model.rowCount()):
-            cast(ModelItem, self.from_model.item(i, 0)).resize(size)
         self.from_list.setIconSize(C.QSize(size, size))
         self.from_list.setGridSize(
             C.QSize(size + separation, size + separation))
         self.from_list.setMinimumWidth(size + separation * 2)
 
-        for i in range(self.to_model.rowCount()):
-            cast(ModelItem, self.to_model.item(i, 0)).resize(size)
         self.to_list.setIconSize(C.QSize(size, size))
         self.to_list.setGridSize(
             C.QSize(size + separation, size + separation))
         self.to_list.setFixedWidth(size + 2 * separation)
 
         self.picture_size = size
+
+        for i in range(self.from_model.rowCount()):
+            cast(ModelItem, self.from_model.item(i, 0)).resize(size)
+            C.QCoreApplication.processEvents()
+        for i in range(self.to_model.rowCount()):
+            cast(ModelItem, self.to_model.item(i, 0)).resize(size)
+            C.QCoreApplication.processEvents()
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
