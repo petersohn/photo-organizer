@@ -170,7 +170,7 @@ class MainWindow(W.QMainWindow):
             self.from_model.removeRow(row)
 
     def remove_items(self) -> None:
-        rows = self._get_selected_items(self.from_list)
+        rows = self._get_selected_items(self.to_list)
         rows.sort(reverse=True)
         for row in rows:
             item = self.to_model.takeItem(row, 0)
