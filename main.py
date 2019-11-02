@@ -5,7 +5,7 @@ import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
 import pprint
-from typing import List, cast, Optional, Dict
+from typing import cast, Dict, List, Optional, Tuple
 
 
 orientations: Dict[int, G.QTransform] = {
@@ -72,40 +72,63 @@ class MainWindow(W.QMainWindow):
         self.to_list.setViewMode(W.QListView.IconMode)
         self.to_list.setMovement(W.QListView.Static)
         self.to_list.setResizeMode(W.QListView.Adjust)
-        self.to_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
+        self.to_list.setSelectionMode(W.QAbstractItemView.ContiguousSelection)
         self.to_list.setModel(self.to_model)
         self.to_list.setIconSize(C.QSize(200, 200))
         self.to_list.setFixedWidth(220)
+        self.to_list.setMovement(W.QListView.Snap)
+        self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
+            lambda s, d: self.check_to_selection())
 
         move_layout = W.QVBoxLayout()
 
         add_button = W.QPushButton('->')
         add_button.clicked.connect(lambda _: self.add_items())
-        move_layout.addWidget(add_button)
-
         remove_button = W.QPushButton('<-')
         remove_button.clicked.connect(lambda _: self.remove_items())
-        move_layout.addWidget(remove_button)
-
         apply_button = W.QPushButton('Apply')
         apply_button.clicked.connect(lambda _: self.apply())
+        move_layout.addWidget(add_button)
+        move_layout.addWidget(remove_button)
         move_layout.addWidget(apply_button)
-
         move_widget = W.QWidget()
         move_widget.setLayout(move_layout)
 
-        splitter = W.QHBoxLayout()
-        splitter.addWidget(self.from_list)
-        splitter.addWidget(move_widget)
-        splitter.addWidget(self.to_list)
+        arrange_layout = W.QVBoxLayout()
+        self.up_button = W.QPushButton('^')
+        self.up_button.clicked.connect(lambda _: self.move_up())
+        self.up_button.setEnabled(False)
+        self.down_button = W.QPushButton('v')
+        self.down_button.clicked.connect(lambda _: self.move_down())
+        self.down_button.setEnabled(False)
+        arrange_layout.addWidget(self.up_button)
+        arrange_layout.addWidget(self.down_button)
+        arrange_widget = W.QWidget()
+        arrange_widget.setLayout(arrange_layout)
+
+        layout = W.QHBoxLayout()
+        layout.addWidget(self.from_list)
+        layout.addWidget(move_widget)
+        layout.addWidget(self.to_list)
+        layout.addWidget(arrange_widget)
         central_widget = W.QWidget()
-        central_widget.setLayout(splitter)
+        central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-    def add_items(self) -> None:
-        rows = [
+    def _get_selected_items(self, view: W.QListView) -> List[int]:
+        return [
             index.row() for index in
-            self.from_list.selectionModel().selectedIndexes()]
+            view.selectionModel().selectedIndexes()]
+
+    def _get_selection_range(
+            self, view: W.QListView) -> Optional[Tuple[int, int]]:
+        selections = self._get_selected_items(view)
+        if not selections:
+            return None
+        return (min(selections), max(selections) + 1)
+
+    def add_items(self) -> None:
+        rows = self._get_selected_items(self.from_list)
         for row in rows:
             item = self.from_model.takeItem(row, 0)
             self.to_model.appendRow(item)
@@ -114,15 +137,44 @@ class MainWindow(W.QMainWindow):
             self.from_model.removeRow(row)
 
     def remove_items(self) -> None:
-        rows = [
-            index.row() for index in
-            self.to_list.selectionModel().selectedIndexes()]
+        rows = self._get_selected_items(self.from_list)
         rows.sort(reverse=True)
         for row in rows:
             item = self.to_model.takeItem(row, 0)
             self.to_model.removeRow(row)
             self.from_model.appendRow(item)
         self.from_model.sort(0)
+
+    def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
+        result = [self.to_model.takeItem(row, 0)
+                  for row in range(first, last)]
+        self.to_model.removeRows(first, last - first)
+        return result
+
+    def move_up(self) -> None:
+        selection = self._get_selection_range(self.to_list)
+        assert selection
+        first, last = selection
+        assert first != 0
+        items = self._take_to_items(first, last)
+        for item in items:
+            self.to_model.insertRow(first - 1, item)
+
+    def move_down(self) -> None:
+        selection = self._get_selection_range(self.to_list)
+        assert selection
+        first, last = selection
+        assert last < self.to_model.rowCount()
+        items = self._take_to_items(first, last)
+        for item in items:
+            self.to_model.insertRow(first + 1, item)
+
+    def check_to_selection(self) -> None:
+        selection = self._get_selection_range(self.to_list)
+        self.up_button.setEnabled(selection is not None and selection[0] != 0)
+        self.down_button.setEnabled(
+            selection is not None and
+            selection[1] != self.to_model.rowCount())
 
     def apply(self) -> None:
         for i in range(self.to_model.rowCount()):
