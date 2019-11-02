@@ -82,23 +82,24 @@ class MainWindow(W.QMainWindow):
 
         move_layout = W.QVBoxLayout()
 
-        add_button = W.QPushButton('->')
+        add_button = W.QToolButton()
+        add_button.setArrowType(C.Qt.RightArrow)
         add_button.clicked.connect(lambda _: self.add_items())
-        remove_button = W.QPushButton('<-')
+        remove_button = W.QToolButton()
+        remove_button.setArrowType(C.Qt.LeftArrow)
         remove_button.clicked.connect(lambda _: self.remove_items())
-        apply_button = W.QPushButton('Apply')
-        apply_button.clicked.connect(lambda _: self.apply())
         move_layout.addWidget(add_button)
         move_layout.addWidget(remove_button)
-        move_layout.addWidget(apply_button)
         move_widget = W.QWidget()
         move_widget.setLayout(move_layout)
 
         arrange_layout = W.QVBoxLayout()
-        self.up_button = W.QPushButton('^')
+        self.up_button = W.QToolButton()
+        self.up_button.setArrowType(C.Qt.UpArrow)
         self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
-        self.down_button = W.QPushButton('v')
+        self.down_button = W.QToolButton()
+        self.down_button.setArrowType(C.Qt.DownArrow)
         self.down_button.clicked.connect(lambda _: self.move_down())
         self.down_button.setEnabled(False)
         arrange_layout.addWidget(self.up_button)
@@ -114,6 +115,10 @@ class MainWindow(W.QMainWindow):
         central_widget = W.QWidget()
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
+
+        toolbar = W.QToolBar()
+        toolbar.addAction('Apply', self.apply)
+        self.addToolBar(toolbar)
 
     def _get_selected_items(self, view: W.QListView) -> List[int]:
         return [
