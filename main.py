@@ -44,10 +44,13 @@ def get_pixmap(filename: str, size: int) -> G.QPixmap:
 
 
 class ModelItem(G.QStandardItem):
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, size: int):
         self.filename = filename
         super(ModelItem, self).__init__(
-            G.QIcon(get_pixmap(filename, 200)), os.path.basename(filename))
+            G.QIcon(get_pixmap(filename, size)), os.path.basename(filename))
+
+    def resize(self, size: int) -> None:
+        self.setIcon(G.QIcon(get_pixmap(self.filename, size)))
 
 
 class InitEvent(C.QEvent):
@@ -81,9 +84,6 @@ class MainWindow(W.QMainWindow):
         self.from_list.setResizeMode(W.QListView.Adjust)
         self.from_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
         self.from_list.setModel(self.from_model)
-        self.from_list.setIconSize(C.QSize(200, 200))
-        self.from_list.setMinimumWidth(220)
-        self.from_list.setGridSize(C.QSize(210, 210))
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
@@ -94,10 +94,10 @@ class MainWindow(W.QMainWindow):
         self.to_list.setResizeMode(W.QListView.Adjust)
         self.to_list.setSelectionMode(W.QAbstractItemView.ContiguousSelection)
         self.to_list.setModel(self.to_model)
-        self.to_list.setIconSize(C.QSize(200, 200))
-        self.to_list.setFixedWidth(220)
         self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_to_selection())
+
+        self.resize_pictures(200)
 
         move_layout = W.QVBoxLayout()
 
@@ -136,10 +136,32 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(central_widget)
 
         toolbar = W.QToolBar()
+        toolbar.addAction(
+            '+', lambda: self.resize_pictures(self.picture_size + 10))
+        toolbar.addAction(
+            '-', lambda: self.resize_pictures(self.picture_size - 10))
         toolbar.addAction('Apply', self.apply)
         self.addToolBar(toolbar)
 
         C.QCoreApplication.postEvent(self, InitEvent(path))
+
+    def resize_pictures(self, size: int) -> None:
+        separation = 10
+        for i in range(self.from_model.rowCount()):
+            cast(ModelItem, self.from_model.item(i, 0)).resize(size)
+        self.from_list.setIconSize(C.QSize(size, size))
+        self.from_list.setGridSize(
+            C.QSize(size + separation, size + separation))
+        self.from_list.setMinimumWidth(size + separation * 2)
+
+        for i in range(self.to_model.rowCount()):
+            cast(ModelItem, self.to_model.item(i, 0)).resize(size)
+        self.to_list.setIconSize(C.QSize(size, size))
+        self.to_list.setGridSize(
+            C.QSize(size + separation, size + separation))
+        self.to_list.setFixedWidth(size + 2 * separation)
+
+        self.picture_size = size
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
@@ -229,7 +251,7 @@ class MainWindow(W.QMainWindow):
                 for entry in it if is_allowed(entry.name) and entry.is_file()]
         images.sort()
         for image in images:
-            self.from_model.appendRow([ModelItem(image)])
+            self.from_model.appendRow([ModelItem(image, self.picture_size)])
             W.QApplication.processEvents()
 
 
