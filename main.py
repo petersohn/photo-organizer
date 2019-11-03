@@ -64,7 +64,7 @@ class InitEvent(C.QEvent):
 
 def is_allowed(name: str) -> bool:
     for ex in ['.jpg', '.jpeg', '.png', '.bmp']:
-        if name.endswith(ex):
+        if name.lower().endswith(ex):
             return True
     return False
 
