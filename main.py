@@ -159,12 +159,13 @@ class MainWindow(W.QMainWindow):
             self.obj = obj
 
         def __enter__(self) -> None:
+            if self.obj.gui_disabled == 0:
+                self.obj.add_button.setEnabled(False)
+                self.obj.remove_button.setEnabled(False)
+                self.obj.up_button.setEnabled(False)
+                self.obj.down_button.setEnabled(False)
+                G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.BusyCursor))
             self.obj.gui_disabled += 1
-            self.obj.add_button.setEnabled(False)
-            self.obj.remove_button.setEnabled(False)
-            self.obj.up_button.setEnabled(False)
-            self.obj.down_button.setEnabled(False)
-            G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.BusyCursor))
 
         def __exit__(self, *args: Any) -> None:
             assert self.obj.gui_disabled > 0
