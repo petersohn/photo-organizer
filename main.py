@@ -5,7 +5,7 @@ import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
 import pprint
-from typing import cast, Dict, List, Optional, Tuple
+from typing import Any, cast, Dict, List, Optional, Tuple
 
 
 orientations: Dict[int, G.QTransform] = {
@@ -74,6 +74,8 @@ class MainWindow(W.QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Photo Organizer")
         self.resize(800, 500)
+        self.gui_disabled = 0
+        self.picture_size = 200
 
         self.from_model = G.QStandardItemModel()
         self.from_list = W.QListView()
@@ -82,6 +84,8 @@ class MainWindow(W.QMainWindow):
         self.from_list.setResizeMode(W.QListView.Adjust)
         self.from_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
         self.from_list.setModel(self.from_model)
+        self.from_list.selectionModel().selectionChanged.connect(  # type: ignore
+            lambda s, d: self.check_from_selection())
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
@@ -93,18 +97,16 @@ class MainWindow(W.QMainWindow):
         self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_to_selection())
 
-        self.resize_pictures(200)
-
         move_layout = W.QVBoxLayout()
 
-        add_button = W.QToolButton()
-        add_button.setArrowType(C.Qt.RightArrow)
-        add_button.clicked.connect(lambda _: self.add_items())
-        remove_button = W.QToolButton()
-        remove_button.setArrowType(C.Qt.LeftArrow)
-        remove_button.clicked.connect(lambda _: self.remove_items())
-        move_layout.addWidget(add_button)
-        move_layout.addWidget(remove_button)
+        self.add_button = W.QToolButton()
+        self.add_button.setArrowType(C.Qt.RightArrow)
+        self.add_button.clicked.connect(lambda _: self.add_items())
+        self.remove_button = W.QToolButton()
+        self.remove_button.setArrowType(C.Qt.LeftArrow)
+        self.remove_button.clicked.connect(lambda _: self.remove_items())
+        move_layout.addWidget(self.add_button)
+        move_layout.addWidget(self.remove_button)
         move_widget = W.QWidget()
         move_widget.setLayout(move_layout)
 
@@ -150,6 +152,24 @@ class MainWindow(W.QMainWindow):
 
         C.QCoreApplication.postEvent(self, InitEvent(path))
 
+    class GuiDisabler:
+        def __init__(self, obj: 'MainWindow'):
+            self.obj = obj
+
+        def __enter__(self) -> None:
+            self.obj.gui_disabled += 1
+            self.obj.add_button.setEnabled(False)
+            self.obj.remove_button.setEnabled(False)
+            self.obj.up_button.setEnabled(False)
+            self.obj.down_button.setEnabled(False)
+
+        def __exit__(self, *args: Any) -> None:
+            assert self.obj.gui_disabled > 0
+            self.obj.gui_disabled -= 1
+            if self.obj.gui_disabled == 0:
+                self.obj.check_to_selection()
+                self.obj.check_from_selection()
+
     def resize_pictures(self, size: int) -> None:
         separation = 10
         self.from_list.setIconSize(C.QSize(size, size))
@@ -164,15 +184,17 @@ class MainWindow(W.QMainWindow):
 
         self.picture_size = size
 
-        for i in range(self.from_model.rowCount()):
-            cast(ModelItem, self.from_model.item(i, 0)).resize(size)
-            C.QCoreApplication.processEvents()
-        for i in range(self.to_model.rowCount()):
-            cast(ModelItem, self.to_model.item(i, 0)).resize(size)
-            C.QCoreApplication.processEvents()
+        with self.GuiDisabler(self):
+            for i in range(self.from_model.rowCount()):
+                cast(ModelItem, self.from_model.item(i, 0)).resize(size)
+                C.QCoreApplication.processEvents()
+            for i in range(self.to_model.rowCount()):
+                cast(ModelItem, self.to_model.item(i, 0)).resize(size)
+                C.QCoreApplication.processEvents()
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
+            self.resize_pictures(self.picture_size)
             init_event = cast(InitEvent, event)
             self._add_dir(init_event.path)
             return True
@@ -198,6 +220,8 @@ class MainWindow(W.QMainWindow):
         rows.sort(reverse=True)
         for row in rows:
             self.from_model.removeRow(row)
+        self.check_from_selection()
+        self.check_to_selection()
 
     def remove_items(self) -> None:
         rows = self._get_selected_items(self.to_list)
@@ -207,6 +231,8 @@ class MainWindow(W.QMainWindow):
             self.to_model.removeRow(row)
             self.from_model.appendRow(item)
         self.from_model.sort(0)
+        self.check_from_selection()
+        self.check_to_selection()
 
     def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
         result = [self.to_model.takeItem(row, 0)
@@ -241,11 +267,20 @@ class MainWindow(W.QMainWindow):
         self._move(first, last, 1)
 
     def check_to_selection(self) -> None:
+        if self.gui_disabled != 0:
+            return
         selection = self._get_selection_range(self.to_list)
         self.up_button.setEnabled(selection is not None and selection[0] != 0)
         self.down_button.setEnabled(
             selection is not None and
             selection[1] != self.to_model.rowCount())
+        self.remove_button.setEnabled(selection is not None)
+
+    def check_from_selection(self) -> None:
+        if self.gui_disabled != 0:
+            return
+        self.add_button.setEnabled(
+            len(self.from_list.selectionModel().selectedIndexes()) != 0)
 
     def apply(self) -> None:
         for i in range(self.to_model.rowCount()):
