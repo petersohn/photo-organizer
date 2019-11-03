@@ -102,9 +102,11 @@ class MainWindow(W.QMainWindow):
         self.add_button = W.QToolButton()
         self.add_button.setArrowType(C.Qt.RightArrow)
         self.add_button.clicked.connect(lambda _: self.add_items())
+        self.add_button.setEnabled(False)
         self.remove_button = W.QToolButton()
         self.remove_button.setArrowType(C.Qt.LeftArrow)
         self.remove_button.clicked.connect(lambda _: self.remove_items())
+        self.remove_button.setEnabled(False)
         move_layout.addWidget(self.add_button)
         move_layout.addWidget(self.remove_button)
         move_widget = W.QWidget()
@@ -162,6 +164,7 @@ class MainWindow(W.QMainWindow):
             self.obj.remove_button.setEnabled(False)
             self.obj.up_button.setEnabled(False)
             self.obj.down_button.setEnabled(False)
+            G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.BusyCursor))
 
         def __exit__(self, *args: Any) -> None:
             assert self.obj.gui_disabled > 0
@@ -169,6 +172,7 @@ class MainWindow(W.QMainWindow):
             if self.obj.gui_disabled == 0:
                 self.obj.check_to_selection()
                 self.obj.check_from_selection()
+                G.QGuiApplication.restoreOverrideCursor()
 
     def resize_pictures(self, size: int) -> None:
         separation = 10
@@ -194,9 +198,11 @@ class MainWindow(W.QMainWindow):
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
-            self.resize_pictures(self.picture_size)
             init_event = cast(InitEvent, event)
+            G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.WaitCursor))
+            self.resize_pictures(self.picture_size)
             self._add_dir(init_event.path)
+            G.QGuiApplication.restoreOverrideCursor()
             return True
         return super(MainWindow, self).event(event)
 
