@@ -85,8 +85,6 @@ class MainWindow(W.QMainWindow):
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
-        self.to_list.setFlow(W.QListView.TopToBottom)
-        self.to_list.setWrapping(False)
         self.to_list.setViewMode(W.QListView.IconMode)
         self.to_list.setMovement(W.QListView.Static)
         self.to_list.setResizeMode(W.QListView.Adjust)
@@ -124,14 +122,23 @@ class MainWindow(W.QMainWindow):
         arrange_widget = W.QWidget()
         arrange_widget.setLayout(arrange_layout)
 
-        layout = W.QHBoxLayout()
-        layout.addWidget(self.from_list)
-        layout.addWidget(move_widget)
-        layout.addWidget(self.to_list)
-        layout.addWidget(arrange_widget)
-        central_widget = W.QWidget()
-        central_widget.setLayout(layout)
-        self.setCentralWidget(central_widget)
+        splitter = W.QSplitter()
+
+        from_layout = W.QHBoxLayout()
+        from_layout.addWidget(self.from_list)
+        from_layout.addWidget(move_widget)
+        from_widget = W.QWidget()
+        from_widget.setLayout(from_layout)
+        splitter.addWidget(from_widget)
+
+        to_layout = W.QHBoxLayout()
+        to_layout.addWidget(self.to_list)
+        to_layout.addWidget(arrange_widget)
+        to_widget = W.QWidget()
+        to_widget.setLayout(to_layout)
+        splitter.addWidget(to_widget)
+
+        self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
         toolbar.addAction('+', lambda: self.resize_pictures(
@@ -153,7 +160,7 @@ class MainWindow(W.QMainWindow):
         self.to_list.setIconSize(C.QSize(size, size))
         self.to_list.setGridSize(
             C.QSize(size + separation, size + separation))
-        self.to_list.setFixedWidth(size + 2 * separation)
+        self.to_list.setMinimumWidth(size + separation * 2)
 
         self.picture_size = size
 
