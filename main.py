@@ -5,9 +5,10 @@ import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
 import pprint
-from typing import Any, cast, Dict, List, Optional, Tuple
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
 import config
+import task
 
 
 orientations: Dict[int, G.QTransform] = {
@@ -152,13 +153,14 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
-        toolbar.addAction('+', lambda: self.resize_pictures(
+        toolbar.addAction('+', lambda: self.resize_task.run(
             self.picture_size + picture_size_step))
-        toolbar.addAction('-', lambda: self.resize_pictures(
+        toolbar.addAction('-', lambda: self.resize_task.run(
             self.picture_size - picture_size_step))
         toolbar.addAction('Apply', self.apply)
         self.addToolBar(toolbar)
 
+        self.resize_task = task.Task(self.resize_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(path))
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
@@ -169,6 +171,10 @@ class MainWindow(W.QMainWindow):
             config.config['width'] = self.width()
             config.config['height'] = self.height()
         config.save_config()
+
+    def closeEvent(self, event: G.QCloseEvent) -> None:
+        self.resize_task.interrupt()
+        super(MainWindow, self).closeEvent(event)
 
     class GuiDisabler:
         def __init__(self, obj: 'MainWindow'):
@@ -194,7 +200,7 @@ class MainWindow(W.QMainWindow):
     def disable_gui(self) -> GuiDisabler:
         return self.GuiDisabler(self)
 
-    def resize_pictures(self, size: int) -> None:
+    def resize_pictures(self, check: Callable[[], None], size: int) -> None:
         separation = 10
         self.from_list.setIconSize(C.QSize(size, size))
         self.from_list.setGridSize(
@@ -213,16 +219,16 @@ class MainWindow(W.QMainWindow):
         with self.disable_gui():
             for i in range(self.from_model.rowCount()):
                 cast(ModelItem, self.from_model.item(i, 0)).resize(size)
-                C.QCoreApplication.processEvents()
+                check()
             for i in range(self.to_model.rowCount()):
                 cast(ModelItem, self.to_model.item(i, 0)).resize(size)
-                C.QCoreApplication.processEvents()
+                check()
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
             with self.disable_gui():
-                self.resize_pictures(self.picture_size)
+                self.resize_task.run(self.picture_size)
                 self._add_dir(init_event.path)
             return True
         return super(MainWindow, self).event(event)
@@ -323,7 +329,7 @@ class MainWindow(W.QMainWindow):
         images.sort()
         for image in images:
             self.from_model.appendRow([ModelItem(image)])
-        self.resize_pictures(self.picture_size)
+        self.resize_task.run(self.picture_size)
 
 
 config.load_config()
