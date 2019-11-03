@@ -74,6 +74,17 @@ def is_allowed(name: str) -> bool:
     return False
 
 
+class OverrideCursor:
+    def __init__(self, cursor: G.QCursor):
+        self.cursor = cursor
+
+    def __enter__(self) -> None:
+        G.QGuiApplication.setOverrideCursor(self.cursor)
+
+    def __exit__(self, *args: Any) -> None:
+        G.QGuiApplication.restoreOverrideCursor()
+
+
 class MainWindow(W.QMainWindow):
     def __init__(self, path: str) -> None:
         super(MainWindow, self).__init__()
@@ -153,14 +164,14 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
-        toolbar.addAction('+', lambda: self.resize_task.run(
+        toolbar.addAction('+', lambda: self.resize_pictures(
             self.picture_size + picture_size_step))
-        toolbar.addAction('-', lambda: self.resize_task.run(
+        toolbar.addAction('-', lambda: self.resize_pictures(
             self.picture_size - picture_size_step))
         toolbar.addAction('Apply', self.apply)
         self.addToolBar(toolbar)
 
-        self.resize_task = task.Task(self.resize_pictures)
+        self.load_pictures_task = task.Task(self.load_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(path))
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
@@ -173,63 +184,43 @@ class MainWindow(W.QMainWindow):
         config.save_config()
 
     def closeEvent(self, event: G.QCloseEvent) -> None:
-        self.resize_task.interrupt()
+        self.load_pictures_task.interrupt()
         super(MainWindow, self).closeEvent(event)
 
-    class GuiDisabler:
-        def __init__(self, obj: 'MainWindow'):
-            self.obj = obj
-
-        def __enter__(self) -> None:
-            if self.obj.gui_disabled == 0:
-                self.obj.add_button.setEnabled(False)
-                self.obj.remove_button.setEnabled(False)
-                self.obj.up_button.setEnabled(False)
-                self.obj.down_button.setEnabled(False)
-                G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.BusyCursor))
-            self.obj.gui_disabled += 1
-
-        def __exit__(self, *args: Any) -> None:
-            assert self.obj.gui_disabled > 0
-            self.obj.gui_disabled -= 1
-            if self.obj.gui_disabled == 0:
-                self.obj.check_to_selection()
-                self.obj.check_from_selection()
-                G.QGuiApplication.restoreOverrideCursor()
-
-    def disable_gui(self) -> GuiDisabler:
-        return self.GuiDisabler(self)
-
-    def resize_pictures(self, check: Callable[[], None], size: int) -> None:
-        separation = 10
-        self.from_list.setIconSize(C.QSize(size, size))
-        self.from_list.setGridSize(
-            C.QSize(size + separation, size + separation))
-        self.from_list.setMinimumWidth(size + separation * 2)
-
-        self.to_list.setIconSize(C.QSize(size, size))
-        self.to_list.setGridSize(
-            C.QSize(size + separation, size + separation))
-        self.to_list.setMinimumWidth(size + separation * 2)
-
+    def resize_pictures(self, size: int) -> None:
         self.picture_size = size
         config.config['picture_size'] = size
         config.save_config()
+        self.load_pictures_task.run()
 
-        with self.disable_gui():
+    def load_pictures(self, check: Callable[[], None]) -> None:
+        separation = 10
+        self.from_list.setIconSize(
+            C.QSize(self.picture_size, self.picture_size))
+        self.from_list.setGridSize(C.QSize(
+            self.picture_size + separation, self.picture_size + separation))
+        self.from_list.setMinimumWidth(self.picture_size + separation * 2)
+
+        self.to_list.setIconSize(C.QSize(self.picture_size, self.picture_size))
+        self.to_list.setGridSize(C.QSize(
+            self.picture_size + separation, self.picture_size + separation))
+        self.to_list.setMinimumWidth(self.picture_size + separation * 2)
+
+        with OverrideCursor(G.QCursor(C.Qt.BusyCursor)):
             for i in range(self.from_model.rowCount()):
-                cast(ModelItem, self.from_model.item(i, 0)).resize(size)
+                cast(ModelItem, self.from_model.item(i, 0)).resize(
+                    self.picture_size)
                 check()
             for i in range(self.to_model.rowCount()):
-                cast(ModelItem, self.to_model.item(i, 0)).resize(size)
+                cast(ModelItem, self.to_model.item(i, 0)).resize(
+                    self.picture_size)
                 check()
 
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
-            with self.disable_gui():
-                self.resize_task.run(self.picture_size)
-                self._add_dir(init_event.path)
+            self.load_pictures_task.run()
+            self._add_dir(init_event.path)
             return True
         return super(MainWindow, self).event(event)
 
@@ -259,6 +250,7 @@ class MainWindow(W.QMainWindow):
         self._select_next(self.from_list, rows)
         self.check_from_selection()
         self.check_to_selection()
+        self.load_pictures_task.run()
 
     def remove_items(self) -> None:
         rows = self._get_selected_items(self.to_list)
@@ -271,6 +263,7 @@ class MainWindow(W.QMainWindow):
         self.from_model.sort(0)
         self.check_from_selection()
         self.check_to_selection()
+        self.load_pictures_task.run()
 
     def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
         result = [self.to_model.takeItem(row, 0)
@@ -289,6 +282,7 @@ class MainWindow(W.QMainWindow):
             selection.select(index, index)
         self.to_list.selectionModel().select(
             selection, C.QItemSelectionModel.ClearAndSelect)
+        self.load_pictures_task.run()
 
     def move_up(self) -> None:
         selection = self._get_selected_items(self.to_list)
@@ -301,8 +295,6 @@ class MainWindow(W.QMainWindow):
         self._move(selection, 1)
 
     def check_to_selection(self) -> None:
-        if self.gui_disabled != 0:
-            return
         selection = self._get_selected_items(self.to_list)
         has_selection = len(selection) != 0
         self.up_button.setEnabled(has_selection and min(selection) != 0)
@@ -311,8 +303,6 @@ class MainWindow(W.QMainWindow):
         self.remove_button.setEnabled(has_selection)
 
     def check_from_selection(self) -> None:
-        if self.gui_disabled != 0:
-            return
         self.add_button.setEnabled(
             len(self.from_list.selectionModel().selectedIndexes()) != 0)
 
@@ -329,7 +319,7 @@ class MainWindow(W.QMainWindow):
         images.sort()
         for image in images:
             self.from_model.appendRow([ModelItem(image)])
-        self.resize_task.run(self.picture_size)
+        self.load_pictures_task.run()
 
 
 config.load_config()

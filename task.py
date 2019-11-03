@@ -1,5 +1,5 @@
 import PyQt5.QtCore as C
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable
 
 
 class Interrupted(Exception):
@@ -7,9 +7,9 @@ class Interrupted(Exception):
 
 
 class Task:
-    def __init__(self, task: Callable[..., None]):
+    def __init__(self, task: Callable[[Callable[[], None]], None]):
         self.task = task
-        self._next: Optional[Tuple[Tuple[Any, ...], Dict[str, Any]]] = None
+        self._should_run = False
         self._running = False
         self._interrupted = False
 
@@ -17,22 +17,21 @@ class Task:
         return self._running
 
     def _check(self) -> None:
+        C.QCoreApplication.processEvents()
         if self._interrupted:
             raise Interrupted()
-        C.QCoreApplication.processEvents()
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
-        self._next = (args, kwargs)
+    def run(self) -> None:
+        self._should_run = True
         if self._running:
             self.interrupt()
             return
         self._running = True
         try:
-            while self._next is not None:
-                current_args, current_kwargs = self._next
-                self._next = None
+            while self._should_run:
+                self._should_run = False
                 try:
-                    self.task(self._check, *current_args, **current_kwargs)
+                    self.task(self._check)
                 except Interrupted:
                     self._interrupted = False
         finally:
