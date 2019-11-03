@@ -175,6 +175,9 @@ class MainWindow(W.QMainWindow):
                 self.obj.check_from_selection()
                 G.QGuiApplication.restoreOverrideCursor()
 
+    def disable_gui(self) -> GuiDisabler:
+        return self.GuiDisabler(self)
+
     def resize_pictures(self, size: int) -> None:
         separation = 10
         self.from_list.setIconSize(C.QSize(size, size))
@@ -189,7 +192,7 @@ class MainWindow(W.QMainWindow):
 
         self.picture_size = size
 
-        with self.GuiDisabler(self):
+        with self.disable_gui():
             for i in range(self.from_model.rowCount()):
                 cast(ModelItem, self.from_model.item(i, 0)).resize(size)
                 C.QCoreApplication.processEvents()
@@ -200,10 +203,11 @@ class MainWindow(W.QMainWindow):
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
-            G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.WaitCursor))
-            self.resize_pictures(self.picture_size)
-            self._add_dir(init_event.path)
-            G.QGuiApplication.restoreOverrideCursor()
+            with self.disable_gui():
+                G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.WaitCursor))
+                self.resize_pictures(self.picture_size)
+                self._add_dir(init_event.path)
+                G.QGuiApplication.restoreOverrideCursor()
             return True
         return super(MainWindow, self).event(event)
 
@@ -300,9 +304,11 @@ class MainWindow(W.QMainWindow):
                 os.path.join(sys.argv[1], entry.name)
                 for entry in it if is_allowed(entry.name) and entry.is_file()]
         images.sort()
-        for image in images:
-            self.from_model.appendRow([ModelItem(image, self.picture_size)])
-            W.QApplication.processEvents()
+        with self.disable_gui():
+            for image in images:
+                self.from_model.appendRow(
+                    [ModelItem(image, self.picture_size)])
+                W.QApplication.processEvents()
 
 
 with os.scandir(sys.argv[1]) as it:
