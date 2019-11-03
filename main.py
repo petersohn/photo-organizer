@@ -92,7 +92,7 @@ class MainWindow(W.QMainWindow):
         self.to_list.setViewMode(W.QListView.IconMode)
         self.to_list.setMovement(W.QListView.Static)
         self.to_list.setResizeMode(W.QListView.Adjust)
-        self.to_list.setSelectionMode(W.QAbstractItemView.ContiguousSelection)
+        self.to_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
         self.to_list.setModel(self.to_model)
         self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_to_selection())
@@ -216,13 +216,6 @@ class MainWindow(W.QMainWindow):
             index.row() for index in
             view.selectionModel().selectedIndexes()]
 
-    def _get_selection_range(
-            self, view: W.QListView) -> Optional[Tuple[int, int]]:
-        selections = self._get_selected_items(view)
-        if not selections:
-            return None
-        return (min(selections), max(selections) + 1)
-
     def add_items(self) -> None:
         rows = self._get_selected_items(self.from_list)
         for row in rows:
@@ -251,41 +244,37 @@ class MainWindow(W.QMainWindow):
         self.to_model.removeRows(first, last - first)
         return result
 
-    def _move(self, first: int, last: int, diff: int) -> None:
-        assert first != last
-        items = self._take_to_items(first, last)
-        items.reverse()
-        for item in items:
-            self.to_model.insertRow(first + diff, item)
+    def _move(self, rows: List[int], diff: int) -> None:
+        for row in rows:
+            item = self.to_model.takeItem(row, 0)
+            self.to_model.removeRow(row)
+            self.to_model.insertRow(row + diff, item)
+        selection = C.QItemSelection()
+        for row in rows:
+            index = self.to_model.index(row + diff, 0)
+            selection.select(index, index)
         self.to_list.selectionModel().select(
-            C.QItemSelection(
-                self.to_model.index(first + diff, 0),
-                self.to_model.index(last + diff - 1, 0)),
-            C.QItemSelectionModel.ClearAndSelect)
+            selection, C.QItemSelectionModel.ClearAndSelect)
 
     def move_up(self) -> None:
-        selection = self._get_selection_range(self.to_list)
-        assert selection
-        first, last = selection
-        assert first != 0
-        self._move(first, last, -1)
+        selection = self._get_selected_items(self.to_list)
+        selection.sort()
+        self._move(selection, -1)
 
     def move_down(self) -> None:
-        selection = self._get_selection_range(self.to_list)
-        assert selection
-        first, last = selection
-        assert last < self.to_model.rowCount()
-        self._move(first, last, 1)
+        selection = self._get_selected_items(self.to_list)
+        selection.sort(reverse=True)
+        self._move(selection, 1)
 
     def check_to_selection(self) -> None:
         if self.gui_disabled != 0:
             return
-        selection = self._get_selection_range(self.to_list)
-        self.up_button.setEnabled(selection is not None and selection[0] != 0)
+        selection = self._get_selected_items(self.to_list)
+        has_selection = len(selection) != 0
+        self.up_button.setEnabled(has_selection and min(selection) != 0)
         self.down_button.setEnabled(
-            selection is not None and
-            selection[1] != self.to_model.rowCount())
-        self.remove_button.setEnabled(selection is not None)
+            has_selection and max(selection) != self.to_model.rowCount() - 1)
+        self.remove_button.setEnabled(has_selection)
 
     def check_from_selection(self) -> None:
         if self.gui_disabled != 0:
