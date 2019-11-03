@@ -232,6 +232,17 @@ class MainWindow(W.QMainWindow):
             index.row() for index in
             view.selectionModel().selectedIndexes()]
 
+    def _select_next(
+            self, view: W.QListView, sorted_rows: List[int]) -> None:
+        if not sorted_rows:
+            return
+        next_row = sorted_rows[0] - len(sorted_rows) + 1
+        row_count = view.model().rowCount()
+        if next_row >= row_count:
+            next_row = row_count - 1
+        view.setCurrentIndex(view.model().index(next_row, 0))
+
+
     def add_items(self) -> None:
         rows = self._get_selected_items(self.from_list)
         for row in rows:
@@ -240,6 +251,7 @@ class MainWindow(W.QMainWindow):
         rows.sort(reverse=True)
         for row in rows:
             self.from_model.removeRow(row)
+        self._select_next(self.from_list, rows)
         self.check_from_selection()
         self.check_to_selection()
 
@@ -250,6 +262,7 @@ class MainWindow(W.QMainWindow):
             item = self.to_model.takeItem(row, 0)
             self.to_model.removeRow(row)
             self.from_model.appendRow(item)
+        self._select_next(self.to_list, rows)
         self.from_model.sort(0)
         self.check_from_selection()
         self.check_to_selection()
