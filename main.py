@@ -7,6 +7,8 @@ import exifread
 import pprint
 from typing import Any, cast, Dict, List, Optional, Tuple
 
+import config
+
 
 orientations: Dict[int, G.QTransform] = {
     2: G.QTransform(-1, 0, 0, 1, 0, 0),
@@ -73,9 +75,12 @@ class MainWindow(W.QMainWindow):
     def __init__(self, path: str) -> None:
         super(MainWindow, self).__init__()
         self.setWindowTitle("Photo Organizer")
-        self.resize(800, 500)
+        self.resize(config.config['width'], config.config['height'])
+        if config.config['maximized']:
+            self.setWindowState(C.Qt.WindowMaximized)
+        self.picture_size = config.config['picture_size']
+
         self.gui_disabled = 0
-        self.picture_size = 200
 
         self.from_model = G.QStandardItemModel()
         self.from_list = W.QListView()
@@ -154,6 +159,15 @@ class MainWindow(W.QMainWindow):
 
         C.QCoreApplication.postEvent(self, InitEvent(path))
 
+    def resizeEvent(self, event: G.QResizeEvent) -> None:
+        super(MainWindow, self).resizeEvent(event)
+        maximized = self.isMaximized()
+        config.config['maximized'] = maximized
+        if not maximized:
+            config.config['width'] = self.width()
+            config.config['height'] = self.height()
+        config.save_config()
+
     class GuiDisabler:
         def __init__(self, obj: 'MainWindow'):
             self.obj = obj
@@ -191,6 +205,8 @@ class MainWindow(W.QMainWindow):
         self.to_list.setMinimumWidth(size + separation * 2)
 
         self.picture_size = size
+        config.config['picture_size'] = size
+        config.save_config()
 
         with self.disable_gui():
             for i in range(self.from_model.rowCount()):
@@ -300,11 +316,7 @@ class MainWindow(W.QMainWindow):
                 W.QApplication.processEvents()
 
 
-with os.scandir(sys.argv[1]) as it:
-    images = [
-        os.path.join(sys.argv[1], entry.name)
-        for entry in it if is_allowed(entry.name) and entry.is_file()]
-images.sort()
+config.load_config()
 
 app = W.QApplication([])
 
