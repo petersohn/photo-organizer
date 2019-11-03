@@ -25,14 +25,16 @@ picture_load_step = picture_size_step * 2
 
 
 class ModelItem(G.QStandardItem):
-    def __init__(self, filename: str, size: int):
+    def __init__(self, filename: str):
         self.filename = filename
-        super(ModelItem, self).__init__(
-            self._create_icon(size), os.path.basename(filename))
+        super(ModelItem, self).__init__(os.path.basename(filename))
 
     def resize(self, size: int) -> None:
-        actual_size = self.icon().actualSize(C.QSize(size, size))
-        if actual_size.width() < size and actual_size.height() < size:
+        actual_size: Optional[C.QSize] = None
+        if self.icon() is not None:
+            actual_size = self.icon().actualSize(C.QSize(size, size))
+        if actual_size is None or (
+                actual_size.width() < size and actual_size.height() < size):
             self.setIcon(self._create_icon(size))
 
     def _create_icon(self, size: int) -> G.QIcon:
@@ -220,10 +222,8 @@ class MainWindow(W.QMainWindow):
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
             with self.disable_gui():
-                G.QGuiApplication.setOverrideCursor(G.QCursor(C.Qt.WaitCursor))
                 self.resize_pictures(self.picture_size)
                 self._add_dir(init_event.path)
-                G.QGuiApplication.restoreOverrideCursor()
             return True
         return super(MainWindow, self).event(event)
 
@@ -241,7 +241,6 @@ class MainWindow(W.QMainWindow):
         if next_row >= row_count:
             next_row = row_count - 1
         view.setCurrentIndex(view.model().index(next_row, 0))
-
 
     def add_items(self) -> None:
         rows = self._get_selected_items(self.from_list)
@@ -322,11 +321,9 @@ class MainWindow(W.QMainWindow):
                 os.path.join(sys.argv[1], entry.name)
                 for entry in it if is_allowed(entry.name) and entry.is_file()]
         images.sort()
-        with self.disable_gui():
-            for image in images:
-                self.from_model.appendRow(
-                    [ModelItem(image, self.picture_size)])
-                W.QApplication.processEvents()
+        for image in images:
+            self.from_model.appendRow([ModelItem(image)])
+        self.resize_pictures(self.picture_size)
 
 
 config.load_config()
