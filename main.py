@@ -18,40 +18,37 @@ orientations: Dict[int, G.QTransform] = {
     8: G.QTransform(0, -1, 1, 0, 0, 0),
 }
 
-
-def get_pixmap(filename: str, size: int) -> G.QPixmap:
-    print(filename)
-    key = filename
-    result = cast(Optional[G.QPixmap], G.QPixmapCache.find(key))
-    if result is not None and (
-            result.width() >= size or result.height() >= size):
-        return result
-
-    with open(filename, 'rb') as f:
-        exif = exifread.process_file(f, details=False)
-    orientation = exif.get('Image Orientation')
-
-    result = G.QPixmap(filename)
-    if result.width() > size or result.height() > size:
-        result = result.scaled(
-            size + 20, size + 20,
-            C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
-    if orientation is not None:
-        transform = orientations.get(cast(List[int], orientation.values)[0])
-        if transform is not None:
-            result = result.transformed(transform)
-    G.QPixmapCache.insert(key, result)
-    return result
+picture_size_step = 10
+picture_load_step = picture_size_step * 2
 
 
 class ModelItem(G.QStandardItem):
     def __init__(self, filename: str, size: int):
         self.filename = filename
         super(ModelItem, self).__init__(
-            G.QIcon(get_pixmap(filename, size)), os.path.basename(filename))
+            self._create_icon(size), os.path.basename(filename))
 
     def resize(self, size: int) -> None:
-        self.setIcon(G.QIcon(get_pixmap(self.filename, size)))
+        actual_size = self.icon().actualSize(C.QSize(size, size))
+        if actual_size.width() < size and actual_size.height() < size:
+            self.setIcon(self._create_icon(size))
+
+    def _create_icon(self, size: int) -> G.QIcon:
+        with open(self.filename, 'rb') as f:
+            exif = exifread.process_file(f, details=False)
+        orientation = exif.get('Image Orientation')
+
+        result = G.QPixmap(self.filename)
+        if result.width() > size or result.height() > size:
+            result = result.scaled(
+                size + picture_load_step, size + picture_load_step,
+                C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
+        if orientation is not None:
+            transform = orientations.get(
+                cast(List[int], orientation.values)[0])
+            if transform is not None:
+                result = result.transformed(transform)
+        return G.QIcon(result)
 
 
 class InitEvent(C.QEvent):
@@ -137,10 +134,10 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(central_widget)
 
         toolbar = W.QToolBar()
-        toolbar.addAction(
-            '+', lambda: self.resize_pictures(self.picture_size + 10))
-        toolbar.addAction(
-            '-', lambda: self.resize_pictures(self.picture_size - 10))
+        toolbar.addAction('+', lambda: self.resize_pictures(
+            self.picture_size + picture_size_step))
+        toolbar.addAction('-', lambda: self.resize_pictures(
+            self.picture_size - picture_size_step))
         toolbar.addAction('Apply', self.apply)
         self.addToolBar(toolbar)
 
