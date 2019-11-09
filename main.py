@@ -7,6 +7,8 @@ import exifread
 import pprint
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
+import apply
+import chooser
 import config
 import task
 
@@ -304,9 +306,14 @@ class MainWindow(W.QMainWindow):
             len(self.from_list.selectionModel().selectedIndexes()) != 0)
 
     def apply(self) -> None:
-        for i in range(self.to_model.rowCount()):
-            item = cast(ModelItem, self.to_model.item(i, 0))
-            print(item.filename)
+        dialog = apply.ApplyDialog(self)
+        res = dialog.exec()
+        if res != W.QDialog.Accepted:
+            return
+        print(dialog.get_target_directory())
+        # for i in range(self.to_model.rowCount()):
+        #     item = cast(ModelItem, self.to_model.item(i, 0))
+        #     print(item.filename)
 
     def _is_allowed(self, filename: str) -> bool:
         mime_type = self.mime_db.mimeTypeForFile(filename)
@@ -337,22 +344,9 @@ class MainWindow(W.QMainWindow):
 
     def add_dir(self, recursive: bool) -> None:
         title = 'Add tree' if recursive else 'Add directory'
-        dialog = W.QFileDialog(self, title)
-        last_dir = config.config.get('last_dir')
-        if last_dir is not None:
-            dialog.setDirectory(last_dir)
-        dialog.setNameFilters([
-            'Images (*.jpeg *.jpg *.jpe *.png', 'All Files (*)'])
-        dialog.setFileMode(W.QFileDialog.Directory)
-        dialog.setHistory(config.config.get('dir_history', []))
-        res = dialog.exec()
-        if res != W.QDialog.Accepted:
+        path = chooser.choose_directory(self, title, 'last_dir')
+        if path is None:
             return
-
-        path = dialog.selectedFiles()[0]
-        config.config['last_dir'] = path
-        config.config['dir_history'] = dialog.history()
-        config.save_config()
         self._add_dir(path, recursive)
         self.load_pictures_task.run()
 
