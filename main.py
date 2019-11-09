@@ -123,8 +123,6 @@ class MainWindow(W.QMainWindow):
         self.remove_button.setEnabled(False)
         move_layout.addWidget(self.add_button)
         move_layout.addWidget(self.remove_button)
-        move_widget = W.QWidget()
-        move_widget.setLayout(move_layout)
 
         arrange_layout = W.QVBoxLayout()
         self.up_button = W.QToolButton()
@@ -137,21 +135,19 @@ class MainWindow(W.QMainWindow):
         self.down_button.setEnabled(False)
         arrange_layout.addWidget(self.up_button)
         arrange_layout.addWidget(self.down_button)
-        arrange_widget = W.QWidget()
-        arrange_widget.setLayout(arrange_layout)
 
         splitter = W.QSplitter()
 
         from_layout = W.QHBoxLayout()
         from_layout.addWidget(self.from_list)
-        from_layout.addWidget(move_widget)
+        from_layout.addLayout(move_layout)
         from_widget = W.QWidget()
         from_widget.setLayout(from_layout)
         splitter.addWidget(from_widget)
 
         to_layout = W.QHBoxLayout()
         to_layout.addWidget(self.to_list)
-        to_layout.addWidget(arrange_widget)
+        to_layout.addLayout(arrange_layout)
         to_widget = W.QWidget()
         to_widget.setLayout(to_layout)
         splitter.addWidget(to_widget)
