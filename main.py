@@ -59,10 +59,10 @@ class ModelItem(G.QStandardItem):
 class InitEvent(C.QEvent):
     EventType: Optional[int] = None
 
-    def __init__(self, path: str):
+    def __init__(self, paths: List[str]):
         if InitEvent.EventType is None:
             InitEvent.EventType = C.QEvent.registerEventType()
-        self.path = path
+        self.paths = paths
         super(InitEvent, self).__init__(
             cast(C.QEvent.Type, InitEvent.EventType))
 
@@ -86,7 +86,7 @@ class OverrideCursor:
 
 
 class MainWindow(W.QMainWindow):
-    def __init__(self, path: str) -> None:
+    def __init__(self, paths: List[str]) -> None:
         super(MainWindow, self).__init__()
         self.setWindowTitle("Photo Organizer")
         self.resize(config.config['width'], config.config['height'])
@@ -172,7 +172,7 @@ class MainWindow(W.QMainWindow):
         self.addToolBar(toolbar)
 
         self.load_pictures_task = task.Task(self.load_pictures)
-        C.QCoreApplication.postEvent(self, InitEvent(path))
+        C.QCoreApplication.postEvent(self, InitEvent(paths))
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
         super(MainWindow, self).resizeEvent(event)
@@ -220,7 +220,9 @@ class MainWindow(W.QMainWindow):
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
             self.load_pictures_task.run()
-            self._add_dir(init_event.path)
+            for path in init_event.paths:
+                self._add_dir(path, recursive=True)
+            self.load_pictures_task.run()
             return True
         return super(MainWindow, self).event(event)
 
@@ -311,22 +313,34 @@ class MainWindow(W.QMainWindow):
             item = cast(ModelItem, self.to_model.item(i, 0))
             print(item.filename)
 
-    def _add_dir(self, path: str) -> None:
-        with os.scandir(sys.argv[1]) as it:
-            images = [
-                os.path.join(sys.argv[1], entry.name)
-                for entry in it if is_allowed(entry.name) and entry.is_file()]
-        images.sort()
+    def _get_files(self, path: str, recursive: bool) -> List[str]:
+        result: List[str] = []
+        dirs: List[str] = []
+        with os.scandir(path) as it:
+            for entry in it:
+                if is_allowed(entry.name) and entry.is_file():
+                    result.append(os.path.join(path, entry.name))
+                result.sort()
+                if recursive and entry.is_dir() and \
+                        entry != '' and not entry.name.startswith('.'):
+                    dirs.append(os.path.join(path, entry.name))
+        result.sort()
+        for dir in dirs:
+            result.extend(self._get_files(dir, recursive))
+        return result
+
+    def _add_dir(self, path: str, recursive: bool) -> None:
+        path = os.path.abspath(path)
+        images = self._get_files(path, recursive)
         for image in images:
             self.from_model.appendRow([ModelItem(image)])
-        self.load_pictures_task.run()
 
 
 config.load_config()
 
 app = W.QApplication([])
 
-window = MainWindow(sys.argv[1])
+window = MainWindow(sys.argv[1:])
 window.show()
 
 app.exec_()
