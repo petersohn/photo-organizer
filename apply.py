@@ -12,6 +12,7 @@ class ApplyDialog(W.QDialog):
         self.max_decimals = 10
 
         super(ApplyDialog, self).__init__(*args, **kwargs)
+        self.setWindowTitle('Apply Modifications')
         form_layout = W.QGridLayout()
         form_layout.addWidget(W.QLabel('Target directory'), 0, 0)
         form_layout.addWidget(W.QLabel('Prefix'), 1, 0)

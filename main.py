@@ -4,8 +4,8 @@ import PyQt5.QtWidgets as W
 import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
-import pprint
-from typing import Any, Callable, cast, Dict, List, Optional, Tuple
+# import pprint
+from typing import Any, Callable, cast, Dict, List, Optional, Set
 
 import apply
 import chooser
@@ -83,11 +83,13 @@ class OverrideCursor:
 class MainWindow(W.QMainWindow):
     def __init__(self, paths: List[str]) -> None:
         super(MainWindow, self).__init__()
-        self.setWindowTitle("Photo Organizer")
+        self.setWindowTitle('Photo Organizer')
         self.resize(config.config['width'], config.config['height'])
         if config.config['maximized']:
             self.setWindowState(C.Qt.WindowMaximized)
         self.picture_size = config.config['picture_size']
+
+        self.loaded_files: Set[str] = set()
 
         self.mime_db = C.QMimeDatabase()
 
@@ -98,7 +100,8 @@ class MainWindow(W.QMainWindow):
         self.from_list.setResizeMode(W.QListView.Adjust)
         self.from_list.setSelectionMode(W.QAbstractItemView.ExtendedSelection)
         self.from_list.setModel(self.from_model)
-        self.from_list.selectionModel().selectionChanged.connect(  # type: ignore
+        sm = self.from_list.selectionModel()
+        sm.selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_from_selection())
 
         self.to_model = G.QStandardItemModel()
@@ -322,7 +325,9 @@ class MainWindow(W.QMainWindow):
         with os.scandir(path) as it:
             for entry in it:
                 if self._is_allowed(entry.name) and entry.is_file():
-                    result.append(os.path.join(path, entry.name))
+                    file_path = os.path.join(path, entry.name)
+                    if file_path not in self.loaded_files:
+                        result.append(file_path)
                 result.sort()
                 if recursive and entry.is_dir() and \
                         entry != '' and not entry.name.startswith('.'):
@@ -337,6 +342,7 @@ class MainWindow(W.QMainWindow):
         images = self._get_files(path, recursive)
         for image in images:
             self.from_model.appendRow([ModelItem(image)])
+            self.loaded_files.add(image)
 
     def add_dir(self, recursive: bool) -> None:
         title = 'Add tree' if recursive else 'Add directory'
@@ -347,11 +353,12 @@ class MainWindow(W.QMainWindow):
         self.load_pictures_task.run()
 
 
-config.load_config()
+if __name__ == '__main__':
+    config.load_config()
 
-app = W.QApplication([])
+    app = W.QApplication([])
 
-window = MainWindow(sys.argv[1:])
-window.show()
+    window = MainWindow(sys.argv[1:])
+    window.show()
 
-app.exec_()
+    app.exec_()
