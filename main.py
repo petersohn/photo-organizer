@@ -67,13 +67,6 @@ class InitEvent(C.QEvent):
             cast(C.QEvent.Type, InitEvent.EventType))
 
 
-def is_allowed(name: str) -> bool:
-    for ex in ['.jpg', '.jpeg', '.png', '.bmp']:
-        if name.lower().endswith(ex):
-            return True
-    return False
-
-
 class OverrideCursor:
     def __init__(self, cursor: G.QCursor):
         self.cursor = cursor
@@ -94,7 +87,7 @@ class MainWindow(W.QMainWindow):
             self.setWindowState(C.Qt.WindowMaximized)
         self.picture_size = config.config['picture_size']
 
-        self.gui_disabled = 0
+        self.mime_db = C.QMimeDatabase()
 
         self.from_model = G.QStandardItemModel()
         self.from_list = W.QListView()
@@ -164,6 +157,8 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
+        toolbar.addAction('Add', lambda: self.add_dir(recursive=False))
+        toolbar.addAction('Add tree', lambda: self.add_dir(recursive=True))
         toolbar.addAction('+', lambda: self.resize_pictures(
             self.picture_size + picture_size_step))
         toolbar.addAction('-', lambda: self.resize_pictures(
@@ -313,12 +308,17 @@ class MainWindow(W.QMainWindow):
             item = cast(ModelItem, self.to_model.item(i, 0))
             print(item.filename)
 
+    def _is_allowed(self, filename: str) -> bool:
+        mime_type = self.mime_db.mimeTypeForFile(filename)
+        return mime_type.inherits('image/jpeg') or \
+            mime_type.inherits('image/png')
+
     def _get_files(self, path: str, recursive: bool) -> List[str]:
         result: List[str] = []
         dirs: List[str] = []
         with os.scandir(path) as it:
             for entry in it:
-                if is_allowed(entry.name) and entry.is_file():
+                if self._is_allowed(entry.name) and entry.is_file():
                     result.append(os.path.join(path, entry.name))
                 result.sort()
                 if recursive and entry.is_dir() and \
@@ -334,6 +334,27 @@ class MainWindow(W.QMainWindow):
         images = self._get_files(path, recursive)
         for image in images:
             self.from_model.appendRow([ModelItem(image)])
+
+    def add_dir(self, recursive: bool) -> None:
+        title = 'Add tree' if recursive else 'Add directory'
+        dialog = W.QFileDialog(self, title)
+        last_dir = config.config.get('last_dir')
+        if last_dir is not None:
+            dialog.setDirectory(last_dir)
+        dialog.setNameFilters([
+            'Images (*.jpeg *.jpg *.jpe *.png', 'All Files (*)'])
+        dialog.setFileMode(W.QFileDialog.Directory)
+        dialog.setHistory(config.config.get('dir_history', []))
+        res = dialog.exec()
+        if res != W.QDialog.Accepted:
+            return
+
+        path = dialog.selectedFiles()[0]
+        config.config['last_dir'] = path
+        config.config['dir_history'] = dialog.history()
+        config.save_config()
+        self._add_dir(path, recursive)
+        self.load_pictures_task.run()
 
 
 config.load_config()

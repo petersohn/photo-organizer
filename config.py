@@ -7,7 +7,7 @@ from typing import Any
 
 config_path = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))  # type: ignore
-config_file_name = os.path.join(config_path, 'config.json')
+config_file_name = os.path.join(config_path, 'photo-organizer.json')
 
 config: Any = None
 
