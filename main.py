@@ -29,8 +29,9 @@ picture_load_step = picture_size_step * 2
 
 
 class ModelItem(G.QStandardItem):
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, index: int):
         self.filename = filename
+        self.__index = index
         super(ModelItem, self).__init__(os.path.basename(filename))
 
     def resize(self, size: int) -> None:
@@ -58,6 +59,8 @@ class ModelItem(G.QStandardItem):
                 result = result.transformed(transform)
         return G.QIcon(result)
 
+    def __lt__(self, other: 'ModelItem') -> bool:
+        return self.__index < other.__index
 
 class InitEvent(C.QEvent):
     EventType: Optional[int] = None
@@ -93,6 +96,7 @@ class MainWindow(W.QMainWindow):
         self.loaded_files: Set[str] = set()
 
         self.mime_db = C.QMimeDatabase()
+        self.current_index = 0
 
         self.from_model = G.QStandardItemModel()
         self.from_list = W.QListView()
@@ -371,7 +375,8 @@ class MainWindow(W.QMainWindow):
         path = os.path.abspath(path)
         images = self._get_files(path, recursive)
         for image in images:
-            self.from_model.appendRow([ModelItem(image)])
+            self.from_model.appendRow([ModelItem(image, self.current_index)])
+            self.current_index += 1
             self.loaded_files.add(image)
 
     def add_dir(self, recursive: bool) -> None:
