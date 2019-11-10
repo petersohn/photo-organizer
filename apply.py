@@ -112,10 +112,11 @@ class ApplyDialog(W.QDialog):
         config.save_config()
 
     def _calculate_dir(self, value: str) -> bool:
-        is_ok = os.path.isdir(value)
-        self.calculate_starting_number_button.setEnabled(is_ok)
+        is_dir = os.path.isdir(value)
+        self.calculate_starting_number_button.setEnabled(is_dir)
+        is_ok = is_dir or not os.path.exists(value)
         self.button_box.button(W.QDialogButtonBox.Ok).setEnabled(is_ok)
-        return is_ok
+        return is_dir
 
     def _set_directory(self) -> None:
         starting_dir: Optional[str] = self.get_target_directory()

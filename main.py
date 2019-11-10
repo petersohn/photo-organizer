@@ -4,6 +4,7 @@ import PyQt5.QtWidgets as W
 import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
+import shutil
 # import pprint
 from typing import Any, Callable, cast, Dict, List, Optional, Set
 
@@ -318,10 +319,28 @@ class MainWindow(W.QMainWindow):
         res = dialog.exec()
         if res != W.QDialog.Accepted:
             return
-        print(dialog.get_target_directory())
-        # for i in range(self.to_model.rowCount()):
-        #     item = cast(ModelItem, self.to_model.item(i, 0))
-        #     print(item.filename)
+
+        target_directory = dialog.get_target_directory()
+        prefix = dialog.get_prefix()
+        number = dialog.get_starting_number()
+        decimals = dialog.get_decimals()
+        copy = dialog.is_copy()
+        os.makedirs(target_directory, exist_ok=True)
+        print(target_directory)
+        for i in range(self.to_model.rowCount()):
+            path = cast(ModelItem, self.to_model.item(i)).filename
+            extension = path[path.rfind('.'):]
+            numstr = str(number)
+            numstr = '0' * (max(0, decimals - len(numstr))) + numstr
+            new_path = os.path.join(target_directory, '{}{}{}'.format(
+                prefix, numstr, extension))
+            if copy:
+                print('copy {} -> {}'.format(path, new_path))
+                shutil.copy(path, new_path)
+            else:
+                print('move {} -> {}'.format(path, new_path))
+                os.rename(path, new_path)
+            number += 1
 
     def _is_allowed(self, filename: str) -> bool:
         mime_type = self.mime_db.mimeTypeForFile(filename)
