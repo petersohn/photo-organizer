@@ -339,6 +339,10 @@ class MainWindow(W.QMainWindow):
                 os.rename(path, new_path)
             number += 1
             self.to_model.removeRow(0)
+            self.loaded_files.remove(path)
+        self.load_pictures_task.run()
+        self.check_to_items()
+        self.check_to_selection()
 
     def _is_allowed(self, filename: str) -> bool:
         mime_type = self.mime_db.mimeTypeForFile(filename)
