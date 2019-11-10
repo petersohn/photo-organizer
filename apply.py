@@ -54,7 +54,8 @@ class ApplyDialog(W.QDialog):
         self.calculate_starting_number_button.setText('Calculate')
 
         self.calculate_starting_number_button.clicked.connect(
-            mypy.click_callback(self._calculate_starting_number))
+            mypy.click_callback(
+                lambda: self._calculate_starting_number(True)))
         starting_number_layout.addWidget(self.calculate_starting_number_button)
         form_layout.addLayout(starting_number_layout, 2, 1)
 
@@ -98,8 +99,7 @@ class ApplyDialog(W.QDialog):
         self.resize(width, height)
 
         self._calculate_starting_number_limits(decimals)
-        if self._calculate_dir(path):
-            self._calculate_starting_number()
+        self._calculate_dir(path)
 
     def _commit(self) -> None:
         config.config['last_target_dir'] = self.get_target_directory()
@@ -111,12 +111,14 @@ class ApplyDialog(W.QDialog):
         config.config['apply_dialog_height'] = size.height()
         config.save_config()
 
-    def _calculate_dir(self, value: str) -> bool:
+    def _calculate_dir(self, value: str) -> None:
         is_dir = os.path.isdir(value)
         self.calculate_starting_number_button.setEnabled(is_dir)
         is_ok = is_dir or not os.path.exists(value)
         self.button_box.button(W.QDialogButtonBox.Ok).setEnabled(is_ok)
-        return is_dir
+
+        if is_dir:
+            self._calculate_starting_number(False)
 
     def _set_directory(self) -> None:
         starting_dir: Optional[str] = self.get_target_directory()
@@ -134,9 +136,9 @@ class ApplyDialog(W.QDialog):
     def _calculate_starting_number_limits(self, value: int) -> None:
         self.starting_number_edit.setRange(0, 10 ** value - 1)
 
-    def _calculate_starting_number(self) -> None:
+    def _calculate_starting_number(self, allow_decrease: bool) -> None:
         prefix = self.get_prefix()
-        max_value = -1
+        max_value = -1 if allow_decrease else self.get_starting_number() - 1
         max_len = self.get_decimals()
         with os.scandir(self.get_target_directory()) as it:
             for entry in it:
