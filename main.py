@@ -160,11 +160,14 @@ class MainWindow(W.QMainWindow):
         toolbar = W.QToolBar()
         toolbar.addAction('Add', lambda: self.add_dir(recursive=False))
         toolbar.addAction('Add tree', lambda: self.add_dir(recursive=True))
+        toolbar.addSeparator()
         toolbar.addAction('+', lambda: self.resize_pictures(
             self.picture_size + picture_size_step))
         toolbar.addAction('-', lambda: self.resize_pictures(
             self.picture_size - picture_size_step))
-        toolbar.addAction('Apply', self.apply)
+        toolbar.addSeparator()
+        self.apply_action = toolbar.addAction('Apply', self.apply)
+        self.apply_action.setEnabled(False)
         self.addToolBar(toolbar)
 
         self.load_pictures_task = task.Task(self.load_pictures)
@@ -248,6 +251,7 @@ class MainWindow(W.QMainWindow):
         self._select_next(self.from_list, rows)
         self.check_from_selection()
         self.check_to_selection()
+        self.check_to_items()
         self.load_pictures_task.run()
 
     def remove_items(self) -> None:
@@ -261,6 +265,7 @@ class MainWindow(W.QMainWindow):
         self.from_model.sort(0)
         self.check_from_selection()
         self.check_to_selection()
+        self.check_to_items()
         self.load_pictures_task.run()
 
     def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
@@ -291,6 +296,10 @@ class MainWindow(W.QMainWindow):
         selection = self._get_selected_items(self.to_list)
         selection.sort(reverse=True)
         self._move(selection, 1)
+
+    def check_to_items(self) -> None:
+        has_items = self.to_model.rowCount() != 0
+        self.apply_action.setEnabled(has_items)
 
     def check_to_selection(self) -> None:
         selection = self._get_selected_items(self.to_list)

@@ -18,6 +18,7 @@ class ApplyDialog(W.QDialog):
         form_layout.addWidget(W.QLabel('Prefix'), 1, 0)
         form_layout.addWidget(W.QLabel('Starting number'), 2, 0)
         form_layout.addWidget(W.QLabel('Decimals'), 3, 0)
+        form_layout.addWidget(W.QLabel('Move mode'), 4, 0)
 
         target_directory_layout = W.QHBoxLayout()
         self.target_directory_edit = W.QLineEdit()
@@ -65,6 +66,19 @@ class ApplyDialog(W.QDialog):
             self._calculate_starting_number_limits)
         form_layout.addWidget(self.decimals_edit, 3, 1)
 
+        self.rename_button = W.QRadioButton('Rename')
+        self.copy_button = W.QRadioButton('Copy')
+        copy = config.config.get('copy', False)
+        if copy:
+            self.copy_button.setChecked(True)
+        else:
+            self.rename_button.setChecked(True)
+
+        move_type_layout = W.QHBoxLayout()
+        move_type_layout.addWidget(self.rename_button)
+        move_type_layout.addWidget(self.copy_button)
+        form_layout.addLayout(move_type_layout, 4, 1)
+
         layout = W.QVBoxLayout()
         layout.addLayout(form_layout)
 
@@ -79,6 +93,10 @@ class ApplyDialog(W.QDialog):
 
         self.setLayout(layout)
 
+        width = config.config.get('apply_dialog_width', 0)
+        height = config.config.get('apply_dialog_height', 0)
+        self.resize(width, height)
+
         self._calculate_starting_number_limits(decimals)
         if self._calculate_dir(path):
             self._calculate_starting_number()
@@ -87,6 +105,10 @@ class ApplyDialog(W.QDialog):
         config.config['last_target_dir'] = self.get_target_directory()
         config.config['decimals'] = self.get_decimals()
         config.config['prefix'] = self.get_prefix()
+        config.config['copy'] = self.is_copy()
+        size = self.size()
+        config.config['apply_dialog_width'] = size.width()
+        config.config['apply_dialog_height'] = size.height()
         config.save_config()
 
     def _calculate_dir(self, value: str) -> bool:
@@ -141,3 +163,6 @@ class ApplyDialog(W.QDialog):
 
     def get_target_directory(self) -> str:
         return self.target_directory_edit.text()
+
+    def is_copy(self) -> bool:
+        return self.copy_button.isChecked()
