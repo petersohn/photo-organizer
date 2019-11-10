@@ -326,21 +326,19 @@ class MainWindow(W.QMainWindow):
         decimals = dialog.get_decimals()
         copy = dialog.is_copy()
         os.makedirs(target_directory, exist_ok=True)
-        print(target_directory)
-        for i in range(self.to_model.rowCount()):
-            path = cast(ModelItem, self.to_model.item(i)).filename
+        while self.to_model.rowCount() != 0:
+            path = cast(ModelItem, self.to_model.item(0)).filename
             extension = path[path.rfind('.'):]
             numstr = str(number)
             numstr = '0' * (max(0, decimals - len(numstr))) + numstr
             new_path = os.path.join(target_directory, '{}{}{}'.format(
                 prefix, numstr, extension))
             if copy:
-                print('copy {} -> {}'.format(path, new_path))
                 shutil.copy(path, new_path)
             else:
-                print('move {} -> {}'.format(path, new_path))
                 os.rename(path, new_path)
             number += 1
+            self.to_model.removeRow(0)
 
     def _is_allowed(self, filename: str) -> bool:
         mime_type = self.mime_db.mimeTypeForFile(filename)
