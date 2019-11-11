@@ -163,6 +163,7 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
+        toolbar.addAction('Clear', self.clear)
         toolbar.addAction('Add', lambda: self.add_dir(recursive=False))
         toolbar.addAction('Add tree', lambda: self.add_dir(recursive=True))
         toolbar.addSeparator()
@@ -177,6 +178,15 @@ class MainWindow(W.QMainWindow):
 
         self.load_pictures_task = task.Task(self.load_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(paths))
+
+    def clear(self) -> None:
+        self.from_model.clear()
+        self.to_model.clear()
+        self.loaded_files.clear()
+        self.current_index = 0
+        self.check_from_selection()
+        self.check_to_selection()
+        self.check_to_items()
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
         super(MainWindow, self).resizeEvent(event)
