@@ -122,11 +122,13 @@ class MainWindow(W.QMainWindow):
         move_layout = W.QVBoxLayout()
 
         self.add_button = W.QToolButton()
-        self.add_button.setArrowType(C.Qt.RightArrow)
+        self.add_button.setText('&Add')
+        self.add_button.setIcon(config.get_icon('arrow-right-bold'))
         self.add_button.clicked.connect(lambda _: self.add_items())
         self.add_button.setEnabled(False)
         self.remove_button = W.QToolButton()
-        self.remove_button.setArrowType(C.Qt.LeftArrow)
+        self.remove_button.setText('&Remove')
+        self.remove_button.setIcon(config.get_icon('arrow-left-bold'))
         self.remove_button.clicked.connect(lambda _: self.remove_items())
         self.remove_button.setEnabled(False)
         move_layout.addWidget(self.add_button)
@@ -134,11 +136,13 @@ class MainWindow(W.QMainWindow):
 
         arrange_layout = W.QVBoxLayout()
         self.up_button = W.QToolButton()
-        self.up_button.setArrowType(C.Qt.UpArrow)
+        self.up_button.setText('&Up')
+        self.up_button.setIcon(config.get_icon('arrow-up-bold'))
         self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
         self.down_button = W.QToolButton()
-        self.down_button.setArrowType(C.Qt.DownArrow)
+        self.down_button.setText('&Down')
+        self.down_button.setIcon(config.get_icon('arrow-down-bold'))
         self.down_button.clicked.connect(lambda _: self.move_down())
         self.down_button.setEnabled(False)
         arrange_layout.addWidget(self.up_button)
@@ -163,16 +167,26 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
-        toolbar.addAction('Clear', self.clear)
-        toolbar.addAction('Add', lambda: self.add_dir(recursive=False))
-        toolbar.addAction('Add tree', lambda: self.add_dir(recursive=True))
+        toolbar.addAction(
+            config.get_icon('file-outline'), '&Clear', self.clear)
+        toolbar.addAction(
+            config.get_icon('folder'), 'Add &folder',
+            lambda: self.add_dir(recursive=False))
+        toolbar.addAction(
+            config.get_icon('file-tree'), 'Add &tree',
+            lambda: self.add_dir(recursive=True))
         toolbar.addSeparator()
-        toolbar.addAction('+', lambda: self.resize_pictures(
-            self.picture_size + picture_size_step))
-        toolbar.addAction('-', lambda: self.resize_pictures(
-            self.picture_size - picture_size_step))
+        toolbar.addAction(
+            config.get_icon('magnify-plus'), 'Zoom &in',
+            lambda: self.resize_pictures(
+                self.picture_size + picture_size_step))
+        toolbar.addAction(
+            config.get_icon('magnify-minus'), 'Zoom &out',
+            lambda: self.resize_pictures(
+                self.picture_size - picture_size_step))
         toolbar.addSeparator()
-        self.apply_action = toolbar.addAction('Apply', self.apply)
+        self.apply_action = toolbar.addAction(
+            config.get_icon('floppy'), 'A&pply', self.apply)
         self.apply_action.setEnabled(False)
         self.addToolBar(toolbar)
 

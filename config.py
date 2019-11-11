@@ -3,11 +3,13 @@ import json
 import os
 import sys
 import traceback
+import PyQt5.QtGui as G
 from typing import Any
 
 config_path = os.path.dirname(os.path.abspath(
     inspect.getfile(inspect.currentframe())))  # type: ignore
 config_file_name = os.path.join(config_path, 'photo-organizer.json')
+icons_path = os.path.join(config_path, 'icons')
 
 config: Any = None
 
@@ -43,3 +45,6 @@ def save_config() -> None:
     except Exception:
         print('Failed to save config.', file=sys.stderr)
         traceback.print_exc()
+
+def get_icon(name: str) -> G.QIcon:
+    return G.QIcon(os.path.join(icons_path, name + '.svg'))
