@@ -207,18 +207,18 @@ class MainWindow(W.QMainWindow):
         config.save_config()
         self.load_pictures_task.run()
 
-    def load_pictures(self, check: Callable[[], None]) -> None:
+    def _set_view_size(self, view: W.QListView) -> None:
         separation = 10
-        self.from_list.setIconSize(
-            C.QSize(self.picture_size, self.picture_size))
-        self.from_list.setGridSize(C.QSize(
-            self.picture_size + separation, self.picture_size + separation))
-        self.from_list.setMinimumWidth(self.picture_size + separation * 2)
+        font_metrics = G.QFontMetrics(view.viewOptions().font)
+        view.setIconSize(C.QSize(self.picture_size, self.picture_size))
+        view.setGridSize(C.QSize(
+            self.picture_size + separation,
+            self.picture_size + separation + font_metrics.height()))
+        view.setMinimumWidth(self.picture_size + separation * 2)
 
-        self.to_list.setIconSize(C.QSize(self.picture_size, self.picture_size))
-        self.to_list.setGridSize(C.QSize(
-            self.picture_size + separation, self.picture_size + separation))
-        self.to_list.setMinimumWidth(self.picture_size + separation * 2)
+    def load_pictures(self, check: Callable[[], None]) -> None:
+        self._set_view_size(self.from_list)
+        self._set_view_size(self.to_list)
 
         with OverrideCursor(G.QCursor(C.Qt.BusyCursor)):
             for i in range(self.from_model.rowCount()):
