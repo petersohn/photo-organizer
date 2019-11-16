@@ -11,6 +11,7 @@ from typing import Any, Callable, cast, Dict, List, Optional, Set
 import apply
 import chooser
 import config
+import helper
 import task
 
 
@@ -122,29 +123,37 @@ class MainWindow(W.QMainWindow):
         move_layout = W.QVBoxLayout()
 
         self.add_button = W.QToolButton()
-        self.add_button.setText('&Add')
+        self.add_button.setText('Add')
         self.add_button.setIcon(config.get_icon('arrow-right-bold'))
         self.add_button.clicked.connect(lambda _: self.add_items())
         self.add_button.setEnabled(False)
+        self.add_button.setShortcut(C.Qt.ALT + C.Qt.Key_Right)
+        helper.set_tooltip(self.add_button)
         self.remove_button = W.QToolButton()
-        self.remove_button.setText('&Remove')
+        self.remove_button.setText('Remove')
         self.remove_button.setIcon(config.get_icon('arrow-left-bold'))
         self.remove_button.clicked.connect(lambda _: self.remove_items())
         self.remove_button.setEnabled(False)
+        self.remove_button.setShortcut(C.Qt.ALT + C.Qt.Key_Left)
+        helper.set_tooltip(self.remove_button)
         move_layout.addWidget(self.add_button)
         move_layout.addWidget(self.remove_button)
 
         arrange_layout = W.QVBoxLayout()
         self.up_button = W.QToolButton()
-        self.up_button.setText('&Up')
+        self.up_button.setText('Up')
         self.up_button.setIcon(config.get_icon('arrow-up-bold'))
         self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
+        self.up_button.setEnabled(False)
+        self.up_button.setShortcut(C.Qt.ALT + C.Qt.Key_Up)
         self.down_button = W.QToolButton()
-        self.down_button.setText('&Down')
+        self.down_button.setText('Down')
         self.down_button.setIcon(config.get_icon('arrow-down-bold'))
         self.down_button.clicked.connect(lambda _: self.move_down())
         self.down_button.setEnabled(False)
+        self.down_button.setShortcut(C.Qt.ALT + C.Qt.Key_Down)
+        helper.set_tooltip(self.down_button)
         arrange_layout.addWidget(self.up_button)
         arrange_layout.addWidget(self.down_button)
 
@@ -167,28 +176,38 @@ class MainWindow(W.QMainWindow):
         self.setCentralWidget(splitter)
 
         toolbar = W.QToolBar()
-        toolbar.addAction(
-            config.get_icon('file-outline'), '&Clear', self.clear)
-        toolbar.addAction(
-            config.get_icon('folder'), 'Add &folder',
+        clear_action = toolbar.addAction(
+            config.get_icon('file-outline'), 'Clear', self.clear)
+        clear_action.setShortcut(C.Qt.ALT + C.Qt.Key_C)
+        helper.set_tooltip(clear_action)
+        add_action = toolbar.addAction(
+            config.get_icon('folder'), 'Add folder',
             lambda: self.add_dir(recursive=False))
+        add_action.setShortcut(C.Qt.ALT + C.Qt.Key_F)
+        helper.set_tooltip(add_action)
         toolbar.addAction(
-            config.get_icon('file-tree'), 'Add &tree',
+            config.get_icon('file-tree'), 'Add tree',
             lambda: self.add_dir(recursive=True))
         toolbar.addSeparator()
-        toolbar.addAction(
-            config.get_icon('magnify-plus'), 'Zoom &in',
+        zoom_in_action = toolbar.addAction(
+            config.get_icon('magnify-plus'), 'Zoom in',
             lambda: self.resize_pictures(
                 self.picture_size + picture_size_step))
-        toolbar.addAction(
-            config.get_icon('magnify-minus'), 'Zoom &out',
+        zoom_in_action.setShortcut(C.Qt.CTRL + C.Qt.Key_Plus)
+        helper.set_tooltip(zoom_in_action)
+        zoom_out_action = toolbar.addAction(
+            config.get_icon('magnify-minus'), 'Zoom out',
             lambda: self.resize_pictures(
                 self.picture_size - picture_size_step))
+        zoom_out_action.setShortcut(C.Qt.CTRL + C.Qt.Key_Minus)
+        helper.set_tooltip(zoom_out_action)
         toolbar.addSeparator()
         self.apply_action = toolbar.addAction(
-            config.get_icon('floppy'), 'A&pply', self.apply)
+            config.get_icon('floppy'), 'Apply', self.apply)
         self.apply_action.setEnabled(False)
         self.addToolBar(toolbar)
+        self.apply_action.setShortcut(C.Qt.ALT + C.Qt.Key_A)
+        helper.set_tooltip(self.apply_action)
 
         self.load_pictures_task = task.Task(self.load_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(paths))
