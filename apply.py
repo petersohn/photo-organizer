@@ -29,9 +29,7 @@ class ApplyDialog(W.QDialog):
             path = os.getcwd()
         self.target_directory_edit.setText(path)
 
-        def calculate_dir(value: str) -> None:  # mypy...
-            self._calculate_dir(value)
-        self.target_directory_edit.textChanged.connect(calculate_dir)
+        self.target_directory_edit.textChanged.connect(self._calculate_dir)
         target_directory_layout.addWidget(self.target_directory_edit)
 
         set_dir_button = W.QToolButton()
