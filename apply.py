@@ -143,8 +143,9 @@ class ApplyDialog(W.QDialog):
                 if entry.name.startswith(prefix):
                     num_str = ''
                     for i in range(len(prefix), len(entry.name)):
-                        if entry.name[i] >= '0' and entry.name[i] <= '9':
-                            num_str += entry.name[i]
+                        if entry.name[i] < '0' or entry.name[i] > '9':
+                            break
+                        num_str += entry.name[i]
                     if num_str:
                         value = int(num_str)
                         if value < 2**31:
