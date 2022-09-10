@@ -65,7 +65,7 @@ class ApplyDialog(W.QDialog):
             self._calculate_starting_number_limits)
         form_layout.addWidget(self.decimals_edit, 3, 1)
 
-        self.rename_button = W.QRadioButton('Rename')
+        self.rename_button = W.QRadioButton('Move')
         self.copy_button = W.QRadioButton('Copy')
         copy = config.config.get('copy', False)
         if copy:

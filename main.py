@@ -109,6 +109,8 @@ class MainWindow(W.QMainWindow):
         sm = self.from_list.selectionModel()
         sm.selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_from_selection())
+        self.from_list.doubleClicked.connect(  # type: ignore
+            lambda idx: self.open_file(idx))
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
@@ -429,6 +431,13 @@ class MainWindow(W.QMainWindow):
             return
         self._add_dir(path, recursive)
         self.load_pictures_task.run()
+
+    def open_file(self, idx: C.QModelIndex) -> None:
+        item = cast(ModelItem, self.from_model.itemFromIndex(idx))
+        try:
+            os.startfile(item.filename) # type: ignore
+        except Exception as e:
+            print(e, file=sys.stderr)
 
 
 if __name__ == '__main__':
