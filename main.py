@@ -110,7 +110,7 @@ class MainWindow(W.QMainWindow):
         sm.selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_from_selection())
         self.from_list.doubleClicked.connect(  # type: ignore
-            lambda idx: self.open_file(idx))
+            lambda idx: self.open_file(self.from_model, idx))
 
         self.to_model = G.QStandardItemModel()
         self.to_list = W.QListView()
@@ -121,6 +121,8 @@ class MainWindow(W.QMainWindow):
         self.to_list.setModel(self.to_model)
         self.to_list.selectionModel().selectionChanged.connect(  # type: ignore
             lambda s, d: self.check_to_selection())
+        self.to_list.doubleClicked.connect(  # type: ignore
+            lambda idx: self.open_file(self.to_model, idx))
 
         move_layout = W.QVBoxLayout()
 
@@ -432,8 +434,9 @@ class MainWindow(W.QMainWindow):
         self._add_dir(path, recursive)
         self.load_pictures_task.run()
 
-    def open_file(self, idx: C.QModelIndex) -> None:
-        item = cast(ModelItem, self.from_model.itemFromIndex(idx))
+    def open_file(self, model: G.QStandardItemModel, idx: C.QModelIndex) -> None:
+        item = cast(ModelItem, model.itemFromIndex(idx))
+        print(item.filename)
         try:
             os.startfile(item.filename) # type: ignore
         except Exception as e:
