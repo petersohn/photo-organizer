@@ -235,6 +235,12 @@ class MainWindow(W.QMainWindow):
         config.save_config()
 
     def closeEvent(self, event: G.QCloseEvent) -> None:
+        if self.to_model.rowCount() != 0:
+            result = W.QMessageBox.question(
+                self, "Exit program", "Do you really want to quit?")
+            if result != W.QMessageBox.Yes:
+                event.ignore()
+                return
         self.load_pictures_task.interrupt()
         super(MainWindow, self).closeEvent(event)
 
