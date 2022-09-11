@@ -339,6 +339,7 @@ class MainWindow(W.QMainWindow):
         for row in rows:
             index = self.to_model.index(row + diff, 0)
             selection.select(index, index)
+            self.to_list.scrollTo(index)
         self.to_list.selectionModel().select(
             selection, C.QItemSelectionModel.ClearAndSelect)
         self.load_pictures_task.run()
