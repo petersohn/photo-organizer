@@ -294,9 +294,13 @@ class MainWindow(W.QMainWindow):
 
     def add_items(self) -> None:
         rows = self._get_selected_items(self.from_list)
+        to_rows = self._get_selected_items(self.to_list)
         for row in rows:
             item = self.from_model.takeItem(row, 0)
-            self.to_model.appendRow(item)
+            if to_rows:
+                self.to_model.insertRow(to_rows[0], item)
+            else:
+                self.to_model.appendRow(item)
         rows.sort(reverse=True)
         for row in rows:
             self.from_model.removeRow(row)
