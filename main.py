@@ -227,6 +227,7 @@ class MainWindow(W.QMainWindow):
         self.check_from_selection()
         self.check_to_selection()
         self.check_to_items()
+        self.save_items()
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
         super(MainWindow, self).resizeEvent(event)
