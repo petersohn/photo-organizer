@@ -35,6 +35,9 @@ class ModelItem(G.QStandardItem):
         self.__index = index
         super(ModelItem, self).__init__(os.path.basename(filename))
 
+    def get_index(self) -> int:
+        return self.__index
+
     def resize(self, size: int) -> None:
         actual_size: Optional[C.QSize] = None
         if self.icon() is not None:
@@ -276,12 +279,34 @@ class MainWindow(W.QMainWindow):
     def event(self, event: C.QEvent) -> bool:
         if cast(int, event.type()) == InitEvent.EventType:
             init_event = cast(InitEvent, event)
-            self.load_pictures_task.run()
-            for path in init_event.paths:
-                self._add_dir(path, recursive=True)
-            self.load_pictures_task.run()
+            self.init(init_event)
             return True
         return super(MainWindow, self).event(event)
+
+    def init(self, init_event: InitEvent) -> None:
+        def add_item(model: G.QStandardItemModel, item: Any) -> None:
+            filename = item['filename']
+            index = item['index']
+            model.appendRow([ModelItem(filename, index)])
+            self.current_index = max(self.current_index, index + 1)
+            self.loaded_files.add(filename)
+
+        self.load_pictures_task.run()
+        if init_event.paths:
+            for path in init_event.paths:
+                self._add_dir(path, recursive=True)
+            self.save_items()
+        elif 'items' in config.config:
+            items = config.config['items']
+            for item in items['from']:
+                add_item(self.from_model, item)
+            for item in items['to']:
+                add_item(self.to_model, item)
+        else:
+            return
+
+        self.load_pictures_task.run()
+
 
     def _get_selected_items(self, view: W.QListView) -> List[int]:
         return [
@@ -314,6 +339,7 @@ class MainWindow(W.QMainWindow):
         self.check_from_selection()
         self.check_to_selection()
         self.check_to_items()
+        self.save_items()
         self.load_pictures_task.run()
 
     def remove_items(self) -> None:
@@ -328,6 +354,7 @@ class MainWindow(W.QMainWindow):
         self.check_from_selection()
         self.check_to_selection()
         self.check_to_items()
+        self.save_items()
         self.load_pictures_task.run()
 
     def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
@@ -354,11 +381,13 @@ class MainWindow(W.QMainWindow):
         selection = self._get_selected_items(self.to_list)
         selection.sort()
         self._move(selection, -1)
+        self.save_items()
 
     def move_down(self) -> None:
         selection = self._get_selected_items(self.to_list)
         selection.sort(reverse=True)
         self._move(selection, 1)
+        self.save_items()
 
     def check_to_items(self) -> None:
         has_items = self.to_model.rowCount() != 0
@@ -371,6 +400,20 @@ class MainWindow(W.QMainWindow):
         self.down_button.setEnabled(
             has_selection and max(selection) != self.to_model.rowCount() - 1)
         self.remove_button.setEnabled(has_selection)
+
+    def save_items(self) -> None:
+        def convert(item: G.QStandardItem) -> Any:
+            item_ = cast(ModelItem, item)
+            return {'filename': item_.filename, 'index': item_.get_index()}
+
+        def get_items(model: G.QStandardItemModel) -> List[Any]:
+            return [convert(model.item(row)) for row in range(model.rowCount())]
+
+        config.config['items'] = {
+            'from': get_items(self.from_model),
+            'to': get_items(self.to_model),
+        }
+        config.save_config()
 
     def check_from_selection(self) -> None:
         self.add_button.setEnabled(
@@ -404,6 +447,7 @@ class MainWindow(W.QMainWindow):
             self.loaded_files.remove(path)
         self.check_to_items()
         self.check_to_selection()
+        self.save_items()
         self.load_pictures_task.run()
 
     def _is_allowed(self, filename: str) -> bool:
@@ -443,11 +487,11 @@ class MainWindow(W.QMainWindow):
         if path is None:
             return
         self._add_dir(path, recursive)
+        self.save_items()
         self.load_pictures_task.run()
 
     def open_file(self, model: G.QStandardItemModel, idx: C.QModelIndex) -> None:
         item = cast(ModelItem, model.itemFromIndex(idx))
-        print(item.filename)
         try:
             os.startfile(item.filename) # type: ignore
         except Exception as e:
