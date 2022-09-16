@@ -238,6 +238,10 @@ class MainWindow(W.QMainWindow):
             config.get_icon('file-tree'), 'Add tree',
             lambda: self.add_dir(recursive=True))
         toolbar.addSeparator()
+        toolbar.addAction(
+            config.get_icon('sort'), 'Sort input',
+            lambda: sort_menu.popup(G.QCursor.pos()))
+        toolbar.addSeparator()
         zoom_in_action = toolbar.addAction(
             config.get_icon('magnify-plus'), 'Zoom in',
             lambda: self.resize_pictures(
@@ -257,9 +261,6 @@ class MainWindow(W.QMainWindow):
         self.addToolBar(toolbar)
         self.apply_action.setShortcut(C.Qt.ALT + C.Qt.Key_A)
         helper.set_tooltip(self.apply_action)
-        sort_menu_action = toolbar.addAction(
-            config.get_icon('sort'), 'Sort input',
-            lambda: sort_menu.popup(G.QCursor.pos()))
 
         self.load_pictures_task = task.Task(self.load_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(paths))
