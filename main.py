@@ -30,9 +30,28 @@ picture_load_step = picture_size_step * 2
 
 
 class ModelItem(G.QStandardItem):
-    def __init__(self, filename: str, index: int):
+    def __init__(
+            self, filename: str, index: int,
+            sort_function: 'Callable[[ModelItem], Any]'):
+        self.sort_function = sort_function
         self.filename = filename
         self.__index = index
+
+        with open(self.filename, 'rb') as f:
+            exif = exifread.process_file(f, details=False)
+        def get_exif_tag(name: str) -> Any:
+            tag = exif.get(name)
+            if tag is None:
+                return None
+            return tag.values
+
+        orientations = get_exif_tag('Image Orientation')
+        self.orientation: Optional[int] = orientations[0] \
+            if orientations is not None else None
+
+        date = get_exif_tag('EXIF DateTimeOriginal')
+        self.date: str = date if date is not None else ''
+
         super(ModelItem, self).__init__(os.path.basename(filename))
 
     def get_index(self) -> int:
@@ -47,24 +66,27 @@ class ModelItem(G.QStandardItem):
             self.setIcon(self._create_icon(size))
 
     def _create_icon(self, size: int) -> G.QIcon:
-        with open(self.filename, 'rb') as f:
-            exif = exifread.process_file(f, details=False)
-        orientation = exif.get('Image Orientation')
-
         result = G.QPixmap(self.filename)
         if result.width() > size or result.height() > size:
             result = result.scaled(
                 size + picture_load_step, size + picture_load_step,
                 C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
-        if orientation is not None:
-            transform = orientations.get(
-                cast(List[int], orientation.values)[0])
+        if self.orientation is not None:
+            transform = orientations.get(self.orientation)
             if transform is not None:
                 result = result.transformed(transform)
         return G.QIcon(result)
 
     def __lt__(self, other: 'ModelItem') -> bool:
-        return self.__index < other.__index
+        return self.sort_function(self) < self.sort_function(other)
+
+
+sort_functions: Dict[str, Callable[[ModelItem], Any]] = {
+    'index': lambda m: m.get_index(),
+    'name': lambda m: (m.text(), m.get_index()),
+    'date': lambda m: (m.date, m.get_index()),
+    'date_name': lambda m: (m.date, m.text(), m.get_index()),
+}
 
 class InitEvent(C.QEvent):
     EventType: Optional[int] = None
@@ -182,6 +204,26 @@ class MainWindow(W.QMainWindow):
 
         self.setCentralWidget(splitter)
 
+        self.current_sort_function = config.config.get('sort_function', 'index')
+        def create_sort_action(name: str, text: str) -> W.QAction:
+            action = W.QAction(text)
+            action.setCheckable(True)
+            action.setChecked(name == self.current_sort_function)
+            action.setData(name)
+            return action
+
+        sort_actions = W.QActionGroup(self)
+        sort_actions.addAction(create_sort_action('index', 'None'))
+        sort_actions.addAction(create_sort_action('name', 'File name'))
+        sort_actions.addAction(create_sort_action('date', 'EXIF date'))
+        sort_actions.addAction(
+            create_sort_action('date_name', 'EXIF date or file name'))
+        sort_actions.triggered.connect(
+            lambda action: self.set_sort(cast(str, action.data())))
+
+        sort_menu = W.QMenu()
+        sort_menu.addActions(sort_actions.actions())
+
         toolbar = W.QToolBar()
         clear_action = toolbar.addAction(
             config.get_icon('file-outline'), 'Clear', self.clear)
@@ -215,6 +257,9 @@ class MainWindow(W.QMainWindow):
         self.addToolBar(toolbar)
         self.apply_action.setShortcut(C.Qt.ALT + C.Qt.Key_A)
         helper.set_tooltip(self.apply_action)
+        sort_menu_action = toolbar.addAction(
+            config.get_icon('sort'), 'Sort input',
+            lambda: sort_menu.popup(G.QCursor.pos()))
 
         self.load_pictures_task = task.Task(self.load_pictures)
         C.QCoreApplication.postEvent(self, InitEvent(paths))
@@ -284,15 +329,19 @@ class MainWindow(W.QMainWindow):
             return True
         return super(MainWindow, self).event(event)
 
+    def _create_model_item(self, filename: str, index: int) -> ModelItem:
+        def sort_function(item: ModelItem) -> Any:
+            return sort_functions[self.current_sort_function](item)
+        return ModelItem(filename, index, sort_function)
+
     def init(self, init_event: InitEvent) -> None:
         def add_item(model: G.QStandardItemModel, item: Any) -> None:
             filename = item['filename']
             index = item['index']
-            model.appendRow([ModelItem(filename, index)])
+            model.appendRow([self._create_model_item(filename, index)])
             self.current_index = max(self.current_index, index + 1)
             self.loaded_files.add(filename)
 
-        self.load_pictures_task.run()
         if init_event.paths:
             for path in init_event.paths:
                 self._add_dir(path, recursive=True)
@@ -304,8 +353,10 @@ class MainWindow(W.QMainWindow):
             for item in items['to']:
                 add_item(self.to_model, item)
         else:
+            self.load_pictures_task.run()
             return
 
+        self.from_model.sort(0)
         self.load_pictures_task.run()
 
 
@@ -356,6 +407,13 @@ class MainWindow(W.QMainWindow):
         self.check_to_selection()
         self.check_to_items()
         self.save_items()
+        self.load_pictures_task.run()
+
+    def set_sort(self, name: str) -> None:
+        self.current_sort_function = name
+        self.from_model.sort(0)
+        config.config['sort_function'] = name
+        config.save_config()
         self.load_pictures_task.run()
 
     def _take_to_items(self, first: int, last: int) -> List[G.QStandardItem]:
@@ -478,7 +536,8 @@ class MainWindow(W.QMainWindow):
         path = os.path.abspath(path)
         images = self._get_files(path, recursive)
         for image in images:
-            self.from_model.appendRow([ModelItem(image, self.current_index)])
+            self.from_model.appendRow([
+                self._create_model_item(image, self.current_index)])
             self.current_index += 1
             self.loaded_files.add(image)
 
