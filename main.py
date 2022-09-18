@@ -5,6 +5,7 @@ import PyQt5.QtGui as G
 import PyQt5.QtCore as C
 import exifread
 import shutil
+import traceback
 # import pprint
 from typing import Any, Callable, cast, Dict, List, Optional, Set
 
@@ -25,6 +26,26 @@ orientations: Dict[int, G.QTransform] = {
     8: G.QTransform(0, -1, 1, 0, 0, 0),
 }
 
+class Exif:
+    def __init__(self, filename: str, **kwargs: Any):
+        with open(filename, 'rb') as f:
+            self.data = exifread.process_file(f, **kwargs)
+
+    def get_exif_tag(self, name: str) -> Any:
+        tag = self.data.get(name)
+        if tag is None:
+            return None
+        return tag.values
+
+    def get_orientation(self, key: str) -> Optional[int]:
+        orientations = self.get_exif_tag(key)
+        return orientations[0] if orientations is not None else None
+
+    def is_valid(self) -> bool:
+        return len(self.data) != 0
+
+
+
 picture_size_step = 10
 picture_load_step = picture_size_step * 2
 
@@ -36,21 +57,17 @@ class ModelItem(G.QStandardItem):
         self.sort_function = sort_function
         self.filename = filename
         self.__index = index
+        self.__thumbnail_inited = False
 
-        with open(self.filename, 'rb') as f:
-            exif = exifread.process_file(f, details=False)
-        def get_exif_tag(name: str) -> Any:
-            tag = exif.get(name)
-            if tag is None:
-                return None
-            return tag.values
+        exif = Exif(self.filename, details=False)
 
-        orientations = get_exif_tag('Image Orientation')
-        self.orientation: Optional[int] = orientations[0] \
-            if orientations is not None else None
+        self.__has_exif = exif.is_valid()
 
-        date = get_exif_tag('EXIF DateTimeOriginal')
-        self.date: str = date if date is not None else ''
+        if self.__has_exif:
+            self.orientation = exif.get_orientation('Image Orientation')
+
+            date = exif.get_exif_tag('EXIF DateTimeOriginal')
+            self.date: str = date if date is not None else ''
 
         super(ModelItem, self).__init__(os.path.basename(filename))
 
@@ -58,24 +75,48 @@ class ModelItem(G.QStandardItem):
         return self.__index
 
     def resize(self, size: int) -> None:
+        self._init_thumbnail()
+
         actual_size: Optional[C.QSize] = None
         if self.icon() is not None:
             actual_size = self.icon().actualSize(C.QSize(size, size))
         if actual_size is None or (
                 actual_size.width() < size and actual_size.height() < size):
-            self.setIcon(self._create_icon(size))
+            self._create_icon(size)
 
-    def _create_icon(self, size: int) -> G.QIcon:
+    def _init_thumbnail(self) -> None:
+        if not self.__has_exif or self.__thumbnail_inited:
+            return
+
+        exif = Exif(self.filename)
+
+        thumbnail = exif.data.get('JPEGThumbnail')
+        if thumbnail is not None:
+            try:
+                thumbnail_img = G.QPixmap()
+                thumbnail_img.loadFromData(cast(bytes, thumbnail))
+                self._set_icon(
+                    thumbnail_img,
+                    exif.get_orientation('Thumbnail Orientation'))
+            except Exception:
+                traceback.print_exc()
+
+        self.__thumbnail_inited = True
+
+    def _set_icon(self, image: G.QPixmap, orientation: Optional[int]) -> None:
+        if orientation is not None:
+            transform = orientations.get(orientation)
+            if transform is not None:
+                image = image.transformed(transform)
+        self.setIcon(G.QIcon(image))
+
+    def _create_icon(self, size: int) -> None:
         result = G.QPixmap(self.filename)
         if result.width() > size or result.height() > size:
             result = result.scaled(
                 size + picture_load_step, size + picture_load_step,
                 C.Qt.KeepAspectRatio, C.Qt.SmoothTransformation)
-        if self.orientation is not None:
-            transform = orientations.get(self.orientation)
-            if transform is not None:
-                result = result.transformed(transform)
-        return G.QIcon(result)
+        self._set_icon(result, self.orientation)
 
     def __lt__(self, other: 'ModelItem') -> bool:
         return self.sort_function(self) < self.sort_function(other)
