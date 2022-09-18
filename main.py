@@ -68,6 +68,9 @@ class ModelItem(G.QStandardItem):
 
             date = exif.get_exif_tag('EXIF DateTimeOriginal')
             self.date: str = date if date is not None else ''
+        else:
+            self.orientation = None
+            self.date = ''
 
         super(ModelItem, self).__init__(os.path.basename(filename))
 
