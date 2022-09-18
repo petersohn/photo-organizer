@@ -226,9 +226,10 @@ class MainWindow(W.QMainWindow):
 
         toolbar = W.QToolBar()
         clear_action = toolbar.addAction(
-            config.get_icon('file-outline'), 'Clear', self.clear)
+            config.get_icon('close-circle-outline'), 'Clear', self.clear)
         clear_action.setShortcut(C.Qt.ALT + C.Qt.Key_C)
         helper.set_tooltip(clear_action)
+        toolbar.addSeparator()
         add_action = toolbar.addAction(
             config.get_icon('folder'), 'Add folder',
             lambda: self.add_dir(recursive=False))
@@ -266,13 +267,39 @@ class MainWindow(W.QMainWindow):
         C.QCoreApplication.postEvent(self, InitEvent(paths))
 
     def clear(self) -> None:
-        self.from_model.clear()
-        self.to_model.clear()
-        self.loaded_files.clear()
-        self.current_index = 0
+        message_box = W.QMessageBox(
+            W.QMessageBox.Icon.Question,
+            'Clear items',
+            'Do you really want to remove all items? Files on the disk will '
+            'not be deleted.',
+            parent=self)
+        inputButton = message_box.addButton(
+            'Clear only unsorted', W.QMessageBox.YesRole)
+        allButton = message_box.addButton(
+            'Clear everything', W.QMessageBox.AcceptRole)
+        cancelButton = message_box.addButton(
+            'Clear all', W.QMessageBox.RejectRole)
+        message_box.exec()
+
+        result = message_box.buttonRole(message_box.clickedButton())
+
+        if result == W.QMessageBox.RejectRole:
+            return
+
+        if result == W.QMessageBox.YesRole:
+            for row in range(self.from_model.rowCount()):
+                self.loaded_files.remove(
+                    cast(ModelItem, self.from_model.item(row)).filename)
+            self.from_model.clear()
+        elif result == W.QMessageBox.AcceptRole:
+            self.from_model.clear()
+            self.to_model.clear()
+            self.loaded_files.clear()
+            self.current_index = 0
+            self.check_to_selection()
+            self.check_to_items()
+
         self.check_from_selection()
-        self.check_to_selection()
-        self.check_to_items()
         self.save_items()
 
     def resizeEvent(self, event: G.QResizeEvent) -> None:
