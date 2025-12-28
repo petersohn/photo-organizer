@@ -1,5 +1,5 @@
-import PyQt5.QtWidgets as W
-from typing import Any, cast, final
+import PyQt6.QtWidgets as W
+from typing import Any, final
 import os
 
 import chooser
@@ -85,10 +85,8 @@ class ApplyDialog(W.QDialog):
         layout.addLayout(form_layout)
 
         self.button_box = W.QDialogButtonBox(
-            cast(
-                W.QDialogButtonBox.StandardButtons,
-                W.QDialogButtonBox.Ok | W.QDialogButtonBox.Cancel,
-            )
+            W.QDialogButtonBox.StandardButton.Ok
+            | W.QDialogButtonBox.StandardButton.Cancel,
         )
         _ = self.button_box.accepted.connect(self.accept)
         _ = self.button_box.rejected.connect(self.reject)

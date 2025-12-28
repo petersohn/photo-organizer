@@ -1,4 +1,4 @@
-import PyQt5.QtWidgets as W
+import PyQt6.QtWidgets as W
 import config
 
 

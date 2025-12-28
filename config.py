@@ -4,7 +4,7 @@ import json
 import os
 import sys
 import traceback
-import PyQt5.QtGui as G
+import PyQt6.QtGui as G
 from typing import Any
 
 

@@ -1,4 +1,4 @@
-import PyQt5.QtCore as C
+import PyQt6.QtCore as C
 from typing import Callable
 
 

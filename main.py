@@ -1,8 +1,8 @@
 import sys
 import os
-import PyQt5.QtWidgets as W
-import PyQt5.QtGui as G
-import PyQt5.QtCore as C
+import PyQt6.QtWidgets as W
+import PyQt6.QtGui as G
+import PyQt6.QtCore as C
 import exifread
 import shutil
 import traceback
@@ -87,9 +87,7 @@ class ModelItem(G.QStandardItem):
         self._init_thumbnail()
 
         actual_size: C.QSize | None = None
-        if (
-            self.icon() is not None
-        ):  # pyright: ignore[reportUnnecessaryComparison]
+        if self.icon() is not None:
             actual_size = self.icon().actualSize(C.QSize(size, size))
         if actual_size is None or (
             actual_size.width() < size and actual_size.height() < size
@@ -231,14 +229,18 @@ class MainWindow(W.QMainWindow):
         self.add_button.setIcon(config.get_icon("arrow-right-bold"))
         _ = self.add_button.clicked.connect(lambda _: self.add_items())
         self.add_button.setEnabled(False)
-        self.add_button.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_Right)
+        self.add_button.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Right)
+        )
         helper.set_tooltip(self.add_button)
         self.remove_button = W.QToolButton()
         self.remove_button.setText("Remove")
         self.remove_button.setIcon(config.get_icon("arrow-left-bold"))
         _ = self.remove_button.clicked.connect(lambda _: self.remove_items())
         self.remove_button.setEnabled(False)
-        self.remove_button.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_Left)
+        self.remove_button.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Left)
+        )
         helper.set_tooltip(self.remove_button)
         move_layout.addWidget(self.add_button)
         move_layout.addWidget(self.remove_button)
@@ -249,13 +251,17 @@ class MainWindow(W.QMainWindow):
         self.up_button.setIcon(config.get_icon("arrow-up-bold"))
         _ = self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
-        self.up_button.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_Up)
+        self.up_button.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Up)
+        )
         self.down_button = W.QToolButton()
         self.down_button.setText("Down")
         self.down_button.setIcon(config.get_icon("arrow-down-bold"))
         _ = self.down_button.clicked.connect(lambda _: self.move_down())
         self.down_button.setEnabled(False)
-        self.down_button.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_Down)
+        self.down_button.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Down)
+        )
         helper.set_tooltip(self.down_button)
         arrange_layout.addWidget(self.up_button)
         arrange_layout.addWidget(self.down_button)
@@ -280,14 +286,14 @@ class MainWindow(W.QMainWindow):
 
         self.current_sort_function = config.config.get("sort_function", "index")
 
-        def create_sort_action(name: str, text: str) -> W.QAction:
-            action = W.QAction(text)
+        def create_sort_action(name: str, text: str) -> G.QAction:
+            action = G.QAction(text)
             action.setCheckable(True)
             action.setChecked(name == self.current_sort_function)
             action.setData(name)
             return action
 
-        sort_actions = W.QActionGroup(self)
+        sort_actions = G.QActionGroup(self)
         _ = sort_actions.addAction(create_sort_action("index", "None"))
         _ = sort_actions.addAction(create_sort_action("name", "File name"))
         _ = sort_actions.addAction(create_sort_action("date", "EXIF date"))
@@ -306,7 +312,9 @@ class MainWindow(W.QMainWindow):
             config.get_icon("close-circle-outline"), "Clear", self.clear
         )
         assert clear_action is not None
-        clear_action.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_C)
+        clear_action.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_C)
+        )
         helper.set_tooltip(clear_action)
         _ = toolbar.addSeparator()
         add_action = toolbar.addAction(
@@ -315,7 +323,9 @@ class MainWindow(W.QMainWindow):
             lambda: self.add_dir(recursive=False),
         )
         assert add_action is not None
-        add_action.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_F)
+        add_action.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_F)
+        )
         helper.set_tooltip(add_action)
         _ = toolbar.addAction(
             config.get_icon("file-tree"),
@@ -335,7 +345,9 @@ class MainWindow(W.QMainWindow):
             lambda: self.resize_pictures(self.picture_size + picture_size_step),
         )
         assert zoom_in_action is not None
-        zoom_in_action.setShortcut(C.Qt.Modifier.CTRL + C.Qt.Key.Key_Plus)
+        zoom_in_action.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.CTRL | C.Qt.Key.Key_Plus)
+        )
         helper.set_tooltip(zoom_in_action)
         zoom_out_action = toolbar.addAction(
             config.get_icon("magnify-minus"),
@@ -343,14 +355,16 @@ class MainWindow(W.QMainWindow):
             lambda: self.resize_pictures(self.picture_size - picture_size_step),
         )
         assert zoom_out_action is not None
-        zoom_out_action.setShortcut(C.Qt.Modifier.CTRL + C.Qt.Key.Key_Minus)
+        zoom_out_action.setShortcut(
+            G.QKeySequence(C.Qt.Modifier.CTRL | C.Qt.Key.Key_Minus)
+        )
         helper.set_tooltip(zoom_out_action)
         _ = toolbar.addSeparator()
         aa = toolbar.addAction(config.get_icon("floppy"), "Apply", self.apply)
         assert aa is not None
         aa.setEnabled(False)
         self.addToolBar(toolbar)
-        aa.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_A)
+        aa.setShortcut(G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_A))
         helper.set_tooltip(aa)
         self.apply_action = aa
 
@@ -429,7 +443,7 @@ class MainWindow(W.QMainWindow):
 
     def _set_view_size(self, view: W.QListView) -> None:
         separation = 10
-        font_metrics = G.QFontMetrics(view.viewOptions().font)
+        font_metrics = G.QFontMetrics(view.font())
         view.setIconSize(C.QSize(self.picture_size, self.picture_size))
         view.setGridSize(
             C.QSize(
@@ -721,4 +735,4 @@ if __name__ == "__main__":
     window = MainWindow(sys.argv[1:])
     window.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
