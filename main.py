@@ -249,7 +249,6 @@ class MainWindow(W.QMainWindow):
         self.up_button.setIcon(config.get_icon("arrow-up-bold"))
         _ = self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
-        self.up_button.setEnabled(False)
         self.up_button.setShortcut(C.Qt.Modifier.ALT + C.Qt.Key.Key_Up)
         self.down_button = W.QToolButton()
         self.down_button.setText("Down")
@@ -489,6 +488,7 @@ class MainWindow(W.QMainWindow):
                 add_item(self.from_model, item)
             for item in items["to"]:
                 add_item(self.to_model, item)
+            self.check_to_items()
         else:
             self.load_pictures_task.run()
             return
