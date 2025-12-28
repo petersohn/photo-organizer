@@ -229,18 +229,14 @@ class MainWindow(W.QMainWindow):
         self.add_button.setIcon(config.get_icon("arrow-right-bold"))
         _ = self.add_button.clicked.connect(lambda _: self.add_items())
         self.add_button.setEnabled(False)
-        self.add_button.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Right)
-        )
+        self.add_button.setShortcut("Alt+Right")
         helper.set_tooltip(self.add_button)
         self.remove_button = W.QToolButton()
         self.remove_button.setText("Remove")
         self.remove_button.setIcon(config.get_icon("arrow-left-bold"))
         _ = self.remove_button.clicked.connect(lambda _: self.remove_items())
         self.remove_button.setEnabled(False)
-        self.remove_button.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Left)
-        )
+        self.remove_button.setShortcut("Alt+Left")
         helper.set_tooltip(self.remove_button)
         move_layout.addWidget(self.add_button)
         move_layout.addWidget(self.remove_button)
@@ -251,17 +247,13 @@ class MainWindow(W.QMainWindow):
         self.up_button.setIcon(config.get_icon("arrow-up-bold"))
         _ = self.up_button.clicked.connect(lambda _: self.move_up())
         self.up_button.setEnabled(False)
-        self.up_button.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Up)
-        )
+        self.up_button.setShortcut("Alt+Up")
         self.down_button = W.QToolButton()
         self.down_button.setText("Down")
         self.down_button.setIcon(config.get_icon("arrow-down-bold"))
         _ = self.down_button.clicked.connect(lambda _: self.move_down())
         self.down_button.setEnabled(False)
-        self.down_button.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_Down)
-        )
+        self.down_button.setShortcut("Alt+Down")
         helper.set_tooltip(self.down_button)
         arrange_layout.addWidget(self.up_button)
         arrange_layout.addWidget(self.down_button)
@@ -312,9 +304,7 @@ class MainWindow(W.QMainWindow):
             config.get_icon("close-circle-outline"), "Clear", self.clear
         )
         assert clear_action is not None
-        clear_action.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_C)
-        )
+        clear_action.setShortcut("Alt+C")
         helper.set_tooltip(clear_action)
         _ = toolbar.addSeparator()
         add_action = toolbar.addAction(
@@ -323,9 +313,7 @@ class MainWindow(W.QMainWindow):
             lambda: self.add_dir(recursive=False),
         )
         assert add_action is not None
-        add_action.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_F)
-        )
+        add_action.setShortcut("Alt+F")
         helper.set_tooltip(add_action)
         _ = toolbar.addAction(
             config.get_icon("file-tree"),
@@ -345,9 +333,7 @@ class MainWindow(W.QMainWindow):
             lambda: self.resize_pictures(self.picture_size + picture_size_step),
         )
         assert zoom_in_action is not None
-        zoom_in_action.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.CTRL | C.Qt.Key.Key_Plus)
-        )
+        zoom_in_action.setShortcut("Ctrl++")
         helper.set_tooltip(zoom_in_action)
         zoom_out_action = toolbar.addAction(
             config.get_icon("magnify-minus"),
@@ -355,16 +341,14 @@ class MainWindow(W.QMainWindow):
             lambda: self.resize_pictures(self.picture_size - picture_size_step),
         )
         assert zoom_out_action is not None
-        zoom_out_action.setShortcut(
-            G.QKeySequence(C.Qt.Modifier.CTRL | C.Qt.Key.Key_Minus)
-        )
+        zoom_out_action.setShortcut("Ctrl+-")
         helper.set_tooltip(zoom_out_action)
         _ = toolbar.addSeparator()
         aa = toolbar.addAction(config.get_icon("floppy"), "Apply", self.apply)
         assert aa is not None
         aa.setEnabled(False)
         self.addToolBar(toolbar)
-        aa.setShortcut(G.QKeySequence(C.Qt.Modifier.ALT | C.Qt.Key.Key_A))
+        aa.setShortcut("Alt+A")
         helper.set_tooltip(aa)
         self.apply_action = aa
 
